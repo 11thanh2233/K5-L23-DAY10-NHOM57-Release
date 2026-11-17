@@ -1,0 +1,7 @@
+__pycache__/
+*.py[cod]
+.data_cache/
+/data_source/
+/runs/
+/grading_runs/
+*.zip
