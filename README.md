@@ -12,7 +12,7 @@ Mỗi nhóm nộp:
 
 1. Script của nhóm đọc `delivery/` và ghi `errors.json`. Không đọc `_private/truth.json`.
 2. `runs/s<seed>/report.md` và `runs/p<seed>/report.md` do `score_findings.py` in ra cho đúng seed giảng viên.
-3. `errors.json` đã dùng để chấm, của seed đó và của lô sạch.
+3. `runs/s<seed>/errors.json` và `runs/p<seed>/errors.json` đã dùng để chấm.
 4. Kết quả `impact` cho release detection: training run `R-021` có bị ảnh hưởng hay không.
 5. Commit riêng của từng người trong nhóm 5–6 người.
 
@@ -254,9 +254,9 @@ Khi nhóm viết script riêng, detection chỉ ghi loại của mục 5 vào `r
 Quyết định in trong báo cáo chỉ nhìn danh sách nộp:
 
 - `HOLD` khi danh sách có ít nhất một lỗi thuộc các loại đã biết.
-- `RELEASE_CANDIDATE` khi danh sách rỗng. Danh sách rỗng trên một lô có lỗi nghĩa là recall 0, không phải lô sạch.
+- `RELEASE_CANDIDATE` khi danh sách rỗng. Danh sách rỗng trên một lô có lỗi nghĩa là recall 0.
 
-Lô sạch (`--fault-count 0`) mà danh sách không rỗng là false hold. F1 trên lô lỗi không đo được việc này.
+Điểm chỉ tính trên run có ground truth khác rỗng. Sửa một delivery tạo bằng `--fault-count 0`, hoặc nộp `errors.json` cho delivery đó, không đổi `rank recall` của seed. Ảnh và nhãn trước khi gài lỗi nằm ở `data_source/coco500` và `data_source/coco_panoptic500`.
 
 ## 7. Việc nhóm làm trong buổi
 
@@ -265,13 +265,12 @@ python scripts/download_public.py --dataset coco500
 python scripts/run_lab.py --seeds 11,22,33
 ```
 
-Lệnh này chỉ tạo `runs/s<seed>/delivery`, `runs/p<seed>/delivery` và `_private/truth.json`, cộng lô sạch seed 44. Chưa có điểm.
+Lệnh này chỉ tạo `runs/s<seed>/delivery`, `runs/p<seed>/delivery` và `_private/truth.json`. Chưa có điểm.
 
 Nhóm viết script đọc delivery, ghi `errors.json` đúng format mục 6, rồi:
 
 ```bash
 python scripts/score_findings.py --run runs/s11 --run runs/p11
-python scripts/score_findings.py --run runs/clean44 --run runs/pclean44
 ```
 
 Nhóm được chọn seed khác để thử:
@@ -282,13 +281,14 @@ python scripts/run_lab.py --seeds 7,100,2026
 
 `run_lab.py` ghi đè thư mục run nhưng nối thêm `runs/lineage.jsonl`. Trước một lượt sạch, xóa `runs/`.
 
-Seed đầu tiên được gắn training run `R-021`. Lấy `release_id` trong `runs/s<seed>/delivery/release.json`:
+Seed đầu tiên được gắn training run `R-021`. `score_findings.py` không ghi lineage. Muốn thấy run bị ảnh hưởng, ghi quyết định HOLD cho đúng `release_id` trong `runs/s<seed>/delivery/release.json`, rồi hỏi impact:
 
 ```bash
+python scripts/lineage.py record --event decision --release-id coco500_xxxxxxxxxxxx --decision HOLD
 python scripts/lineage.py impact --release-id coco500_xxxxxxxxxxxx
 ```
 
-Nếu release đó sau này bị giữ vì còn lỗi, dòng mong đợi là `R-021: affected=True action=review_or_retrain`. Giữ release cũ, không ghi đè, làm bản sửa, rồi train lại. Đổi dataset không tự sửa model đã học.
+Dòng mong đợi là `R-021: affected=True action=review_or_retrain`. Chưa ghi HOLD thì dòng đó là `affected=False`. Giữ release cũ, không ghi đè, làm bản sửa, rồi train lại. Đổi dataset không tự sửa model đã học.
 
 ## 8. Cách đọc số
 
@@ -316,11 +316,11 @@ Script của nhóm ghi `runs/s93751/errors.json` và `runs/p93751/errors.json`, 
 
 ```bash
 python scripts/score_findings.py --run runs/s93751 --run runs/p93751
-python scripts/score_findings.py --run runs/clean44 --run runs/pclean44
+python scripts/lineage.py record --event decision --release-id <release_id trong runs/s93751/delivery/release.json> --decision HOLD
 python scripts/lineage.py impact --release-id <release_id trong runs/s93751/delivery/release.json>
 ```
 
-Nộp hai `report.md`, hai `errors.json`, và dòng `rank recall`. Giảng viên chạy lại injector cùng seed rồi chạy `score_findings.py` trên file của nhóm. Cùng seed ra cùng ground truth. Danh sách nào khớp nhiều hơn, ít FP hơn, và lô sạch vẫn rỗng, thì đứng trên.
+Nộp hai `report.md`, hai `errors.json`, và dòng `rank recall`. Giảng viên chạy lại injector cùng seed rồi chạy `score_findings.py` trên file của nhóm. Cùng seed ra cùng ground truth. `rank recall` cao hơn thì đứng trên. Số đó không đọc delivery nào khác ngoài hai run của seed.
 
 ## 10. Lệnh lẻ
 
@@ -342,4 +342,3 @@ python -m unittest tests/test_pipeline.py
 - Sửa `metrics.py` hoặc `score_findings.py` để đổi điểm.
 - Để script bắt lỗi đọc `_private/truth.json`.
 - Gộp hai nhóm recall thành một số rồi báo đã bắt 100% lỗi.
-- Nộp `errors.json` của lô sạch có phần tử. Đó là false hold.
