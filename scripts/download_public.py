@@ -246,7 +246,7 @@ def download_coco250(root: Path, pool: str = "practice") -> None:
     txt_count = len(list(labels_dir.glob("*.txt")))
     png_count = len(list(mask_dir.glob("*.png")))
     if jpg_count < SAMPLE_COUNT or txt_count < SAMPLE_COUNT or png_count < SAMPLE_COUNT:
-        raise SystemExit(f"incomplete coco500: {jpg_count} jpg, {txt_count} txt, {png_count} png")
+        raise SystemExit(f"incomplete coco250{suffix}: {jpg_count} jpg, {txt_count} txt, {png_count} png")
     print(f"ready coco250{suffix}: {jpg_count} images, {txt_count} labels")
     print(f"ready coco_panoptic250{suffix}: {png_count} masks, panoptic.json")
     print("Image rights: https://cocodataset.org/dataset/termsofuse.htm")
