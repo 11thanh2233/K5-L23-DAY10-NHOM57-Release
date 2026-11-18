@@ -1,4 +1,4 @@
-"""Scoring contract for one delivery.
+"""Scoring contract for one delivery (detection + panoptic cùng một lô).
 
 A finding is the pair (type, target). scene_leak targets a scene id.
 Every other type targets an image stem. Semantic faults are scored apart
@@ -8,24 +8,25 @@ from rule faults so a single F1 cannot hide a gate that only catches hashes.
 from __future__ import annotations
 
 RULE_TYPES = {
+    # detection: nhìn file giao là thấy (luật)
     "missing_image",
     "wrong_hash",
     "invalid_class",
     "bbox_out_of_bounds",
+    "duplicate_box",
     "scene_leak",
     "guideline_mismatch",
-    "missing_mask",
-    "mask_size_mismatch",
+    # panoptic: luật
     "invalid_category_id",
-    "orphan_segment",
     "thing_overlap",
 }
-SEMANTIC_TYPES = {"bbox_drift", "class_swap", "category_swap", "instance_merge"}
+# Không có nhãn gốc trong delivery: phải đối chiếu detection <-> panoptic rồi xem ảnh.
+SEMANTIC_TYPES = {"class_swap", "bbox_drift", "missing_box", "category_swap", "instance_merge"}
 HOLD_TYPES = RULE_TYPES | SEMANTIC_TYPES
 
 GROUPS = {
     "rule_detectable": RULE_TYPES,
-    "reference_or_review": SEMANTIC_TYPES,
+    "cross_check_review": SEMANTIC_TYPES,
 }
 
 
@@ -59,7 +60,7 @@ def by_type(truth: set[tuple[str, str]], pred: set[tuple[str, str]]) -> list[dic
         row = score(true, flagged)
         row["type"] = kind
         if kind in SEMANTIC_TYPES:
-            row["group"] = "reference_or_review"
+            row["group"] = "cross_check_review"
         elif kind in RULE_TYPES:
             row["group"] = "rule_detectable"
         else:

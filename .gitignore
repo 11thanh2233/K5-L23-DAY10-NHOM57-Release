@@ -6,3 +6,4 @@ __pycache__/
 /runs/
 /grading_runs/
 *.zip
+/hidden/

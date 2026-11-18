@@ -1,18 +1,13 @@
 #!/usr/bin/env python3
-"""Score a student error list against ground truth from an injector.
+"""Chấm danh sách lỗi (errors.json) và phần truy vết (trace.json) của một lô.
 
-Both files use the same list. Only type and target are compared.
-Extra keys on a truth item are ignored.
+  python scripts/score_findings.py --run runs/r11
+  python scripts/score_findings.py --run nop/nhom3 --truth-dir hidden/r93751/_private   # giảng viên chấm đề ẩn
 
-  python scripts/score_findings.py --run runs/s11
-  python scripts/score_findings.py --truth runs/s11/_private/truth.json --errors runs/s11/errors.json
-  python scripts/score_findings.py --run runs/s93751 --run runs/p93751
+errors.json:  {"errors": [{"type": "class_swap", "target": "000000000139"}]}
+trace.json:   {"tier_a": [...ảnh...], "tier_b": [...ảnh...], "notify": ["A01", "Q02"]}
 
-Student file:
-  {"errors": [{"type": "class_swap", "target": "000000000139"}]}
-
-Ground truth file:
-  {"seed": 11, "task": "detection", "errors": [{"type": "class_swap", "target": "000000000139", "unit": "image"}]}
+Điểm xếp hạng là F1 của toàn bộ cặp (type, target): báo thừa bị trừ như bỏ sót.
 """
 
 from __future__ import annotations
@@ -37,110 +32,62 @@ def load_errors(path: Path) -> list[dict]:
     return rows
 
 
-def build(truth_path: Path, errors_path: Path) -> dict:
-    truth_doc = json.loads(truth_path.read_text(encoding="utf-8"))
-    truth_rows = load_errors(truth_path)
-    predicted = load_errors(errors_path)
-    truth = metrics.pairs(truth_rows)
-    pred = metrics.pairs(predicted)
-    return {
-        "truth": str(truth_path),
-        "errors": str(errors_path),
-        "task": truth_doc.get("task"),
-        "seed": truth_doc.get("seed"),
-        "decision": metrics.decision(predicted),
-        "error_count": len(predicted),
-        "truth_count": len(truth),
-        "score": {
-            "overall": metrics.score(truth, pred),
-            "groups": metrics.group_scores(truth, pred),
-            "by_type": metrics.by_type(truth, pred),
-        },
-    }
-
-
 def fmt(value) -> str:
     return "—" if value is None else str(value)
 
 
-def render(report: dict) -> str:
-    overall = report["score"]["overall"]
-    lines = [
-        f"# Score — seed {report.get('seed')} {report.get('task') or ''}".rstrip(),
-        "",
-        f"- Quyết định từ danh sách nộp: **{report['decision']}**",
-        f"- Số lỗi nộp: {report['error_count']}",
-        f"- Overall: precision {fmt(overall['precision'])} · recall {fmt(overall['recall'])} · F1 {fmt(overall['f1'])} "
-        f"(TP {overall['tp']} / FP {overall['fp']} / FN {overall['fn']})",
-        "",
-    ]
-    for name, row in report["score"]["groups"].items():
-        lines.append(
-            f"- {name}: precision {fmt(row['precision'])} · recall {fmt(row['recall'])} · F1 {fmt(row['f1'])} "
-            f"(TP {row['tp']} / FP {row['fp']} / FN {row['fn']})"
-        )
-    lines += ["", "| type | group | TP | FP | FN | recall |", "|---|---|---:|---:|---:|---:|"]
-    for row in report["score"]["by_type"]:
-        lines.append(
-            f"| {row['type']} | {row['group']} | {row['tp']} | {row['fp']} | {row['fn']} | {row['recall']} |"
-        )
-    lines.append("")
-    return "\n".join(lines)
+def line(name: str, row: dict) -> str:
+    return (f"- {name}: precision {fmt(row['precision'])} · recall {fmt(row['recall'])} · F1 {fmt(row['f1'])} "
+            f"(TP {row['tp']} / FP {row['fp']} / FN {row['fn']})")
 
 
-def score_run(run: Path) -> dict:
-    truth_path = run / "_private" / "truth.json"
-    errors_path = run / "errors.json"
-    if not truth_path.is_file():
-        raise SystemExit(f"Thiếu {truth_path}. Chạy inject trước.")
-    if not errors_path.is_file():
-        raise SystemExit(f"Thiếu {errors_path}. Ghi danh sách lỗi của nhóm vào file này.")
-    report = build(truth_path, errors_path)
-    report["run"] = str(run)
-    (run / "metrics.json").write_text(json.dumps(report, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
-    text = render(report)
-    (run / "report.md").write_text(text, encoding="utf-8")
-    print(text)
-    return report
-
-
-def rank_line(reports: list[dict]) -> str:
-    graded = [report for report in reports if report.get("truth_count", 0) > 0]
-    by_task = {report.get("task"): report for report in graded}
-    det = by_task.get("detection")
-    pan = by_task.get("panoptic")
-    if det is None or pan is None:
-        return ""
-    det_r = det["score"]["groups"].get("reference_or_review", {}).get("recall")
-    pan_r = pan["score"]["groups"].get("reference_or_review", {}).get("recall")
-    if not isinstance(det_r, float) or not isinstance(pan_r, float):
-        return ""
-    return f"rank recall = {round((det_r + pan_r) / 2, 4)}  (trung bình label recall detection và panoptic)\n"
+def score_trace(truth: dict, path: Path) -> dict | None:
+    if not path.is_file():
+        return None
+    doc = json.loads(path.read_text(encoding="utf-8"))
+    out = {}
+    for key in ("tier_a", "tier_b", "notify"):
+        out[key] = metrics.score({("x", v) for v in truth[key]}, {("x", v) for v in doc.get(key, [])})
+    return out
 
 
 def main() -> int:
-    parser = argparse.ArgumentParser(description="Compare a student error list with injector ground truth")
-    parser.add_argument("--run", action="append", default=[], help="Run directory with _private/truth.json and errors.json")
-    parser.add_argument("--truth", help="Ground truth JSON from an injector")
-    parser.add_argument("--errors", help="Student JSON with the same errors list")
-    args = parser.parse_args()
-    reports = []
-    if args.run:
-        for raw in args.run:
-            reports.append(score_run(Path(raw)))
-    elif args.truth and args.errors:
-        report = build(Path(args.truth), Path(args.errors))
-        text = render(report)
-        out = Path(args.errors).resolve().parent / "report.md"
-        out.write_text(text, encoding="utf-8")
-        print(text)
-        print(f"wrote {out}")
-        reports.append(report)
+    ap = argparse.ArgumentParser(description="Chấm errors.json và trace.json so với ground truth")
+    ap.add_argument("--run", required=True, help="thư mục có errors.json (và trace.json)")
+    ap.add_argument("--truth-dir", help="mặc định <run>/_private")
+    args = ap.parse_args()
+    run = Path(args.run)
+    tdir = Path(args.truth_dir) if args.truth_dir else run / "_private"
+    if not (tdir / "truth.json").is_file():
+        raise SystemExit(f"Thiếu {tdir / 'truth.json'}. Chạy inject_release.py trước.")
+    if not (run / "errors.json").is_file():
+        raise SystemExit(f"Thiếu {run / 'errors.json'}. Ghi danh sách lỗi của nhóm vào file này.")
+    truth_doc = json.loads((tdir / "truth.json").read_text(encoding="utf-8"))
+    predicted = load_errors(run / "errors.json")
+    truth, pred = metrics.pairs(truth_doc["errors"]), metrics.pairs(predicted)
+    overall = metrics.score(truth, pred)
+    groups = metrics.group_scores(truth, pred)
+    trace = score_trace(json.loads((tdir / "trace_truth.json").read_text(encoding="utf-8")), run / "trace.json") \
+        if (tdir / "trace_truth.json").is_file() else None
+    report = {"seed": truth_doc.get("seed"), "decision": metrics.decision(predicted), "error_count": len(pred),
+              "truth_count": len(truth), "score": {"overall": overall, "groups": groups,
+                                                   "by_type": metrics.by_type(truth, pred)}, "trace": trace}
+    lines = [f"# Score — seed {report['seed']}", "",
+             f"- Quyết định từ danh sách nộp: **{report['decision']}**",
+             f"- Số lỗi nộp: {len(pred)} (lô có {len(truth)} lỗi gài)",
+             line("Overall", overall)]
+    lines += [line(name, row) for name, row in groups.items()]
+    lines += ["", "| type | group | TP | FP | FN |", "|---|---|---:|---:|---:|"]
+    lines += [f"| {r['type']} | {r['group']} | {r['tp']} | {r['fp']} | {r['fn']} |" for r in report["score"]["by_type"]]
+    if trace:
+        lines += ["", "## Truy vết (ticket team AI)"] + [line(k, v) for k, v in trace.items()]
     else:
-        raise SystemExit("Cần --run, hoặc cả --truth và --errors")
-    summary = rank_line(reports)
-    if summary:
-        print(summary, end="")
+        lines += ["", "## Truy vết: chưa có trace.json"]
+    lines += ["", f"**rank F1 = {fmt(overall['f1'])}** (F1 toàn bộ lỗi; báo thừa bị trừ như bỏ sót)", ""]
+    text = "\n".join(lines)
+    (run / "metrics.json").write_text(json.dumps(report, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+    (run / "report.md").write_text(text, encoding="utf-8")
+    print(text)
     return 0
 
 

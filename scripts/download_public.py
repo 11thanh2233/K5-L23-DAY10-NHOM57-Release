@@ -1,19 +1,25 @@
 #!/usr/bin/env python3
 """Download the lab datasets. Python 3.10+, standard library only.
 
-  python scripts/download_public.py --dataset coco500
+  python scripts/download_public.py
+  python scripts/download_public.py --pool test        # giảng viên
   python scripts/download_public.py --dataset coco128
 
-coco500 is the lab set: 500 COCO val2017 images, YOLO detection labels, and the
-matching panoptic masks. The 500 ids are fixed: images that have a non-crowd
-box and a panoptic annotation, sorted by image id, first 500. coco128 remains
-available as the small Ultralytics smoke zip.
+coco250 is the lab set: 250 COCO val2017 images, YOLO detection labels, and the
+matching panoptic masks. The ids are fixed: images that have a non-crowd box and
+a panoptic annotation, sorted by image id. `--pool practice` (default) takes ids
+1-250 of that list; `--pool test` takes ids 251-500 and is for the instructor's
+hidden test delivery. coco128 remains available as the small Ultralytics zip.
+
+Images download in parallel (16 threads) with retries; the mask zip is opened once.
 """
 
 from __future__ import annotations
 
 import argparse
 import json
+import time
+from concurrent.futures import ThreadPoolExecutor
 import shutil
 import urllib.request
 import zipfile
@@ -23,7 +29,8 @@ COCO128_URL = "https://github.com/ultralytics/assets/releases/download/v0.0.0/co
 INSTANCES_URL = "http://images.cocodataset.org/annotations/annotations_trainval2017.zip"
 PANOPTIC_URL = "http://images.cocodataset.org/annotations/panoptic_annotations_trainval2017.zip"
 IMAGE_URL = "http://images.cocodataset.org/val2017/{name}"
-SAMPLE_COUNT = 500
+SAMPLE_COUNT = 250
+POOLS = {"practice": (0, 250), "test": (250, 500)}
 # Official 80 instance categories, in the order used by YOLO COCO labels.
 COCO80 = [
     1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25,
@@ -41,8 +48,15 @@ def download(url: str, dest: Path) -> None:
     partial = dest.with_suffix(dest.suffix + ".part")
     print("downloading", url)
     request = urllib.request.Request(url, headers={"User-Agent": "day10-lab"})
-    with urllib.request.urlopen(request, timeout=180) as response, partial.open("wb") as handle:
-        shutil.copyfileobj(response, handle, length=1024 * 1024)
+    for attempt in range(4):
+        try:
+            with urllib.request.urlopen(request, timeout=180) as response, partial.open("wb") as handle:
+                shutil.copyfileobj(response, handle, length=1024 * 1024)
+            break
+        except OSError:
+            if attempt == 3:
+                raise
+            time.sleep(2 * (attempt + 1))
     partial.replace(dest)
 
 
@@ -105,13 +119,14 @@ def yolo_lines(image: dict, annotations: list[dict], class_of: dict[int, int]) -
     return lines
 
 
-def choose_ids(instances: dict, panoptic: dict) -> list[int]:
+def choose_ids(instances: dict, panoptic: dict, pool: str = "practice") -> list[int]:
     boxed = set()
     for ann in instances["annotations"]:
         if not ann.get("iscrowd"):
             boxed.add(ann["image_id"])
     panoptic_ids = {ann["image_id"] for ann in panoptic["annotations"]}
-    chosen = sorted(boxed & panoptic_ids)[:SAMPLE_COUNT]
+    start, stop = POOLS[pool]
+    chosen = sorted(boxed & panoptic_ids)[start:stop]
     if len(chosen) < SAMPLE_COUNT:
         raise SystemExit(f"only {len(chosen)} images have both a box and a panoptic mask")
     return chosen
@@ -149,7 +164,7 @@ def download_coco128(root: Path) -> None:
     print(f"ready coco128: {len(images)} images, {len(labels)} labels")
 
 
-def download_coco500(root: Path) -> None:
+def download_coco250(root: Path, pool: str = "practice") -> None:
     cache = root / "cache"
     instances_zip = cache / "annotations_trainval2017.zip"
     panoptic_zip = cache / "panoptic_annotations_trainval2017.zip"
@@ -159,7 +174,7 @@ def download_coco500(root: Path) -> None:
     panoptic = read_zip_json(panoptic_zip, "panoptic_val2017.json")
     mask_zip = cache / "panoptic_val2017.zip"
     extract_zip_member(panoptic_zip, member(panoptic_zip, "panoptic_val2017.zip"), mask_zip)
-    chosen = choose_ids(instances, panoptic)
+    chosen = choose_ids(instances, panoptic, pool)
     by_id = {image["id"]: image for image in instances["images"]}
     panoptic_by_id = {ann["image_id"]: ann for ann in panoptic["annotations"]}
     anns_by_image: dict[int, list[dict]] = {}
@@ -168,31 +183,41 @@ def download_coco500(root: Path) -> None:
     class_of = {category_id: index for index, category_id in enumerate(COCO80)}
     panoptic_members = zip_names(mask_zip)
 
-    detect = root / "coco500"
+    suffix = "" if pool == "practice" else "_test"
+    detect = root / f"coco250{suffix}"
     images_dir = detect / "images" / "train2017"
     labels_dir = detect / "labels" / "train2017"
     images_dir.mkdir(parents=True, exist_ok=True)
     labels_dir.mkdir(parents=True, exist_ok=True)
-    panoptic_root = root / "coco_panoptic500"
+    panoptic_root = root / f"coco_panoptic250{suffix}"
     mask_dir = panoptic_root / "masks"
     mask_dir.mkdir(parents=True, exist_ok=True)
 
-    for index, image_id in enumerate(chosen, start=1):
-        image = by_id[image_id]
-        jpg = images_dir / image["file_name"]
-        if not jpg.is_file():
-            download(IMAGE_URL.format(name=image["file_name"]), jpg)
-        label = labels_dir / f"{jpg.stem}.txt"
-        if not label.is_file():
-            label.write_text("\n".join(yolo_lines(image, anns_by_image.get(image_id, []), class_of)) + "\n", encoding="utf-8")
-        mask_name = Path(panoptic_by_id[image_id]["file_name"]).name
-        mask = mask_dir / mask_name
-        if mask_name not in panoptic_members:
-            raise SystemExit(f"panoptic zip has no {mask_name}")
-        extract_zip_member(mask_zip, panoptic_members[mask_name], mask)
-        link_or_copy(jpg, panoptic_root / "images" / jpg.name)
-        if index % 50 == 0 or index == SAMPLE_COUNT:
-            print(f"coco500 {index}/{SAMPLE_COUNT}")
+    todo = [by_id[i] for i in chosen if not (images_dir / by_id[i]["file_name"]).is_file()]
+    with ThreadPoolExecutor(max_workers=16) as pool_:
+        for done, _ in enumerate(pool_.map(lambda im: download(IMAGE_URL.format(name=im["file_name"]), images_dir / im["file_name"]), todo), start=1):
+            if done % 50 == 0 or done == len(todo):
+                print(f"images {done}/{len(todo)}")
+    with zipfile.ZipFile(mask_zip) as zmask:
+        for index, image_id in enumerate(chosen, start=1):
+            image = by_id[image_id]
+            jpg = images_dir / image["file_name"]
+            label = labels_dir / f"{jpg.stem}.txt"
+            if not label.is_file():
+                label.write_text("\n".join(yolo_lines(image, anns_by_image.get(image_id, []), class_of)) + "\n", encoding="utf-8")
+            mask_name = Path(panoptic_by_id[image_id]["file_name"]).name
+            mask = mask_dir / mask_name
+            if mask_name not in panoptic_members:
+                raise SystemExit(f"panoptic zip has no {mask_name}")
+            if not (mask.is_file() and mask.stat().st_size > 0):
+                info = zmask.getinfo(panoptic_members[mask_name])
+                if (info.external_attr >> 16) & 0o170000 == 0o120000:
+                    raise SystemExit(f"symlink rejected: {mask_name}")
+                with zmask.open(info) as src, mask.open("wb") as handle:
+                    shutil.copyfileobj(src, handle)
+            link_or_copy(jpg, panoptic_root / "images" / jpg.name)
+            if index % 50 == 0 or index == SAMPLE_COUNT:
+                print(f"coco250{suffix} {index}/{SAMPLE_COUNT}")
 
     chosen_set = set(chosen)
     subset = {
@@ -207,10 +232,10 @@ def download_coco500(root: Path) -> None:
         "task_detection": "YOLO labels converted from instances_val2017.json",
         "task_panoptic": "COCO panoptic val2017",
         "count": SAMPLE_COUNT,
-        "rule": "Image ids present in both non-crowd instance boxes and panoptic_val2017, sorted ascending, first 500.",
+        "rule": f"Image ids present in both non-crowd instance boxes and panoptic_val2017, sorted ascending, positions {POOLS[pool][0] + 1}-{POOLS[pool][1]}.",
         "image_ids": chosen,
-        "detection_dir": "data_source/coco500",
-        "panoptic_dir": "data_source/coco_panoptic500",
+        "detection_dir": f"data_source/coco250{suffix}",
+        "panoptic_dir": f"data_source/coco_panoptic250{suffix}",
         "image_terms": "https://cocodataset.org/dataset/termsofuse.htm",
         "annotation_license": "CC BY 4.0",
     }
@@ -222,14 +247,15 @@ def download_coco500(root: Path) -> None:
     png_count = len(list(mask_dir.glob("*.png")))
     if jpg_count < SAMPLE_COUNT or txt_count < SAMPLE_COUNT or png_count < SAMPLE_COUNT:
         raise SystemExit(f"incomplete coco500: {jpg_count} jpg, {txt_count} txt, {png_count} png")
-    print(f"ready coco500: {jpg_count} images, {txt_count} labels")
-    print(f"ready coco_panoptic500: {png_count} masks, panoptic.json")
+    print(f"ready coco250{suffix}: {jpg_count} images, {txt_count} labels")
+    print(f"ready coco_panoptic250{suffix}: {png_count} masks, panoptic.json")
     print("Image rights: https://cocodataset.org/dataset/termsofuse.htm")
 
 
 def main() -> None:
     parser = argparse.ArgumentParser(description="Download the public lab dataset")
-    parser.add_argument("--dataset", default="coco500", choices=["coco500", "coco128"])
+    parser.add_argument("--dataset", default="coco250", choices=["coco250", "coco128"])
+    parser.add_argument("--pool", default="practice", choices=sorted(POOLS), help="test = 250 ảnh cho đề ẩn của giảng viên")
     parser.add_argument("--root", default="data_source")
     args = parser.parse_args()
     root = Path(args.root).resolve()
@@ -237,7 +263,7 @@ def main() -> None:
     if args.dataset == "coco128":
         download_coco128(root)
     else:
-        download_coco500(root)
+        download_coco250(root, args.pool)
 
 
 if __name__ == "__main__":

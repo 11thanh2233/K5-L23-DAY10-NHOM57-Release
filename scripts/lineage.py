@@ -43,12 +43,13 @@ def main() -> int:
     sub = parser.add_subparsers(dest="cmd", required=True)
 
     record = sub.add_parser("record")
-    record.add_argument("--event", required=True, choices=["source", "inject", "validate", "decision", "train"])
+    record.add_argument("--event", required=True, choices=["source", "inject", "validate", "decision", "release", "train"])
     record.add_argument("--release-id")
     record.add_argument("--seed", type=int)
     record.add_argument("--run-id")
     record.add_argument("--decision")
     record.add_argument("--detail")
+    record.add_argument("--parent", help="release cha (dùng với --event release)")
 
     query = sub.add_parser("impact")
     query.add_argument("--release-id", required=True)
@@ -65,7 +66,7 @@ def main() -> int:
         return 0
 
     event = {"event": args.event}
-    for key in ("release_id", "seed", "run_id", "decision", "detail"):
+    for key in ("release_id", "parent", "seed", "run_id", "decision", "detail"):
         value = getattr(args, key)
         if value is not None:
             event[key] = value
