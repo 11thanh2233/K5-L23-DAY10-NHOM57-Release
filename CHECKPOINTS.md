@@ -5,8 +5,8 @@ Bài **nhóm**, khoảng **4 giờ**. Các mốc tính từ lúc bắt đầu, l
 | Mốc | Mục tiêu | Tự kiểm tra |
 |---|---|---|
 | 0:15 | **CP0** Chuẩn bị | Đã tải dữ liệu; `runs/r<seed>/delivery` có; đã chia việc trong `TEAM.md`. |
-| 0:55 | **CP1** Lỗi luật | `score_findings.py`: `rule_detectable` recall 1.0, không báo thừa, trên ít nhất 2 seed và lô sạch. |
-| 1:50 | **CP2** Đối chiếu + xem ảnh | Biết số ứng viên trên lô sạch; hàng đợi khoảng 15–30 ảnh; `review_log.csv` xong cho seed luyện tập. |
+| 0:55 | **CP1** Lỗi luật | `score_findings.py`: `rule_detectable` recall 1.0, không báo thừa, trên ít nhất 2 seed (seed thêm tạo bằng `inject_release.py`) và lô sạch. |
+| 1:50 | **CP2** Đối chiếu + xem ảnh | Biết số ứng viên trên lô sạch; hàng đợi đủ nhỏ để xem hết; `review_log.csv` xong cho seed luyện tập; công cụ xem ảnh sẵn sàng cho đề ẩn. |
 | 2:05 | **CP3** Quyết định | Lineage có HOLD v1; `impact` ra `R-021: affected=True`. |
 | 2:45 | **CP4** Bàn giao v2 | `check_handover.py` chỉ còn FAIL ở trace/security (nếu chưa làm). |
 | 3:05 | **CP5** Truy vết | `trace.json` có ba khoá; `score_findings.py` có phần truy vết. |
@@ -19,7 +19,7 @@ Bài **nhóm**, khoảng **4 giờ**. Các mốc tính từ lúc bắt đầu, l
 Vì sao `wrong_hash` phải tính lại sha256 thay vì kiểm định dạng? · `scene_leak` có target là gì? · Vì sao `guideline_mismatch` so với job chứ không so với các ảnh khác?
 
 ### CP2
-Lô sạch vẫn có ứng viên: vì sao? · Báo hết ứng viên thì precision và F1 đổi thế nào? · Detection ghi `car`, panoptic ghi `truck`: làm sao biết bên nào sai?
+Lô sạch có thể vẫn có ứng viên: vì sao? · Báo hết ứng viên thì precision và F1 đổi thế nào? · Detection ghi `car`, panoptic ghi `truck`: làm sao biết bên nào sai?
 
 ### CP3
 Đổi dataset có sửa được model đã train không? · Vì sao ngưỡng là theo tỉ lệ ảnh lỗi chứ không theo số lỗi?

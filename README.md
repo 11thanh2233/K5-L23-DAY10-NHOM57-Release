@@ -77,7 +77,7 @@ Ngoài đời, người kiểm chỉ có ảnh và nhãn được giao. Nếu c�
 <details>
 <summary><b>Báo hết ứng viên cho chắc có được không?</b></summary>
 
-Không có lợi. Điểm là **F1**, nên báo thừa bị trừ như bỏ sót. Detection và panoptic của COCO vốn lệch nhau tự nhiên (vật bị che, crowd), nên nhiều ứng viên **không phải lỗi**. Khi giảng viên thử:
+Không có lợi. Điểm là **F1**, nên báo thừa bị trừ như bỏ sót. Detection và panoptic của COCO vốn lệch nhau tự nhiên (vật bị che, crowd), nên với cách ghép thô, nhiều ứng viên **không phải lỗi**. Khi giảng viên thử bằng một validator ghép thô:
 
 | Cách làm | F1 |
 |---|---|

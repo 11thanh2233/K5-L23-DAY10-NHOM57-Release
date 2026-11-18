@@ -26,7 +26,7 @@ Người nào không trả lời được thì phần điểm cá nhân (mục 6
 
 ## 2. Review bằng mắt (15)
 - **8 — Mọi lỗi gán nhãn trong `errors.json` có dòng `confirmed`.** Ghi chú nói **thấy gì** trong ảnh. Ghi "có lỗi" hay "OK" thì chỉ được một nửa.
-- **4 — Có dòng `rejected` có lý do.** Nhóm biết loại ứng viên do lệch tự nhiên (vật bị che, crowd).
+- **4 — Phân biệt lỗi với lệch tự nhiên.** Có dòng `rejected` kèm lý do (vật bị che, crowd); nếu hàng đợi không có ca lệch tự nhiên thì `REPORT.md` cho thấy nhóm đã đo trên lô sạch và giải thích vì sao ngưỡng không gây báo thừa.
 - **3 — Phân biệt đúng `class_swap` / `category_swap`** dựa vào ảnh, không đoán.
 
 ## 3. Bàn giao v2 (25)

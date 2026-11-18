@@ -5,7 +5,8 @@
   python scripts/run_lab.py --seeds 11
   python scripts/score_findings.py --run runs/r11
 
-Seed đầu tiên được gắn với training run R-021 trong runs/lineage.jsonl.
+Seed đầu tiên của lần chạy ĐẦU được gắn với training run R-021 trong runs/lineage.jsonl (chỉ một lần).
+Muốn thêm seed để thử validator mà không đụng lineage: python scripts/inject_release.py --seed X --out runs/rX
 """
 
 from __future__ import annotations
@@ -22,7 +23,7 @@ SCRIPTS = ROOT / "scripts"
 
 def python(script: str, *args: str) -> None:
     cmd = [sys.executable, str(SCRIPTS / script), *args]
-    print("+", " ".join(cmd))
+    print("+", " ".join(cmd), flush=True)
     subprocess.run(cmd, cwd=ROOT, check=True)
 
 
@@ -38,7 +39,9 @@ def main() -> int:
         python("inject_release.py", "--seed", seed, "--out", str(out))
         release = json.loads((out / "delivery" / "release.json").read_text(encoding="utf-8"))
         python("lineage.py", "record", "--event", "inject", "--seed", seed, "--release-id", release["release_id"], "--detail", f"r{seed}")
-        if index == 0:
+        lp = ROOT / "runs" / "lineage.jsonl"
+        has_train = lp.is_file() and any(json.loads(x).get("event") == "train" for x in lp.read_text(encoding="utf-8").splitlines() if x.strip())
+        if index == 0 and not has_train:
             python("lineage.py", "record", "--event", "train", "--release-id", release["release_id"], "--run-id", "R-021")
     print()
     print("Đã tạo delivery và ground truth. Chưa có danh sách lỗi của nhóm.")

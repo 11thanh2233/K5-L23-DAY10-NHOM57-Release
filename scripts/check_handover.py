@@ -21,7 +21,10 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import metrics  # noqa: E402
 
-FIXABLE = {"wrong_hash", "guideline_mismatch", "scene_leak"}  # sửa được trong v2 mà không cần gán lại nhãn
+# Lô v2 là sản phẩm DETECTION (images + labels). Ảnh có lỗi ở nhãn detection hoặc thiếu file phải gán lại:
+# vào rework_queue và rời v2. Lỗi panoptic không làm sai nhãn detection: ảnh ở lại v2, báo team panoptic trong README Ghi chú.
+# wrong_hash, guideline_mismatch, scene_leak sửa được ngay trong v2.
+DET_REWORK = {"missing_image", "invalid_class", "bbox_out_of_bounds", "duplicate_box", "class_swap", "bbox_drift", "missing_box"}
 THRESHOLD = 0.02  # Day 7: > 2% ảnh lỗi thì không Release
 
 
@@ -99,10 +102,10 @@ def main() -> int:
     lab_stems = sorted(p.stem for p in (v2 / "labels").glob("*.txt"))
     rework = read_csv(v2 / "rework_queue.csv")
     rq = {row["image"] for row in rework}
-    bad_imgs = {e["target"] for e in errors if e["target"] in man and e["type"] not in FIXABLE}
+    bad_imgs = {e["target"] for e in errors if e["target"] in man and e["type"] in DET_REWORK}
     r.check("H5", stems == lab_stems and bad_imgs <= rq and not (rq & set(stems)),
             f"v2 có {len(stems)} ảnh; {len(rq)} ảnh lỗi chuyển sang rework_queue, không nằm trong v2",
-            "mỗi ảnh có lỗi (trừ wrong_hash/guideline_mismatch/scene_leak, sửa được) phải vào rework_queue.csv và rời khỏi v2; images/ và labels/ phải khớp nhau")
+            "mỗi ảnh có lỗi nhãn detection hoặc thiếu file phải vào rework_queue.csv và rời khỏi v2 (lỗi panoptic thì ảnh ở lại); images/ và labels/ phải khớp nhau")
     wrong_owner = [row["image"] for row in rework if row["image"] in meta and
                    (row.get("annotator") != jobs[meta[row["image"]]["job_id"]]["annotator"] or row.get("reviewer") != jobs[meta[row["image"]]["job_id"]]["reviewer"])]
     r.check("H6", not wrong_owner, "rework_queue ghi đúng người gán/người kiểm theo jobs.csv", f"sai người gán/kiểm: {wrong_owner[:4]}")
@@ -187,8 +190,11 @@ def main() -> int:
 
     # trace + security
     tr = json.loads((run / "trace.json").read_text(encoding="utf-8")) if (run / "trace.json").is_file() else {}
-    tr_ok = all(isinstance(tr.get(k), list) for k in ("tier_a", "tier_b", "notify")) and set(tr.get("tier_a", []) + tr.get("tier_b", [])) <= set(man)
-    r.check("H16", tr_ok, "trace.json có tier_a, tier_b, notify", "trace.json cần tier_a, tier_b (tên ảnh trong lô), notify (mã người)")
+    people = {j["annotator"] for j in jobs.values()} | {j["reviewer"] for j in jobs.values()}
+    tr_ok = all(isinstance(tr.get(k), list) for k in ("tier_a", "tier_b", "notify")) and tr.get("tier_a") and tr.get("notify") \
+        and set(tr.get("tier_a", []) + tr.get("tier_b", [])) <= set(man) and set(tr.get("notify", [])) <= people
+    r.check("H16", tr_ok, f"trace.json: tier_a {len(tr.get('tier_a', []))} ảnh, tier_b {len(tr.get('tier_b', []))} ảnh, notify {len(tr.get('notify', []))} người",
+            "trace.json cần tier_a (không rỗng), tier_b (có thể rỗng) là tên ảnh trong lô, notify (không rỗng) là mã người có trong jobs.csv")
     sec = (run / "security.md").read_text(encoding="utf-8") if (run / "security.md").is_file() else ""
     parts_ = [p for p in re.split(r"^##\s+", sec, flags=re.M)[1:] if len(re.sub(r"\s+", "", p.split("\n", 1)[-1])) >= 80]
     face = [p for p in parts_ if "khuôn mặt" in p.split("\n")[0].lower()]

@@ -9,7 +9,7 @@
 ## Validator
 
 - Chỉ đọc thư mục `delivery/` được truyền vào. **Không đọc** `_private/`, `data_source/`, annotation COCO (kể cả file trong `data_source/cache/`), và **không dùng mạng**.
-- Chỉ dùng thư viện chuẩn của Python. Pillow chỉ được dùng cho công cụ xem ảnh của nhóm, không dùng trong validator.
+- Chỉ dùng thư viện chuẩn của Python. Được `import` `scripts/pngutil.py` (đọc PNG, thư viện chuẩn). Pillow chỉ được dùng cho công cụ xem ảnh của nhóm, không dùng trong validator.
 - Không nhúng danh sách tên ảnh, id hoặc đáp án của bất kỳ seed nào vào code.
 
 ## Trung thực của số liệu

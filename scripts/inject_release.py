@@ -101,11 +101,11 @@ class Builder:
     def __init__(self, args):
         self.rng = random.Random(args.seed)
         self.seed = args.seed
-        suffix = "" if args.pool == "practice" else "_test"
+        suffix = {"practice": "", "test": "_test", "calib": "_calib"}[args.pool]
         self.det_src = ROOT / "data_source" / f"coco250{suffix}"
         self.pan_src = ROOT / "data_source" / f"coco_panoptic250{suffix}"
         if not (self.pan_src / "panoptic.json").is_file():
-            raise SystemExit(f"Chưa có dữ liệu {self.pan_src}. Chạy: python scripts/download_public.py" + (" --pool test" if suffix else ""))
+            raise SystemExit(f"Chưa có dữ liệu {self.pan_src}. Chạy: python scripts/download_public.py" + (" --pool test" if suffix == "_test" else ""))
         self.opaque = args.opaque
         self.out = Path(args.out)
         self.truth: list[dict] = []
@@ -241,8 +241,11 @@ class Builder:
         elif kind == "duplicate_box":
             it = rng.choice(self.free(lambda i: i["boxes"]))
             row = list(rng.choice(it["boxes"]))
-            jitter = [f"{float(v) + rng.uniform(-0.004, 0.004):.6f}" for v in row[1:3]]
-            it["boxes"].insert(rng.randrange(len(it["boxes"]) + 1), [row[0], *jitter, row[3], row[4]])
+            x, y, w, h = map(float, row[1:5])
+            # lệch 1-2 pixel, giữ nguyên kích thước, không tràn mép (chỉ mang một lỗi)
+            x = min(1 - w / 2, max(w / 2, x + rng.choice([-2, -1, 1, 2]) / it["width"]))
+            y = min(1 - h / 2, max(h / 2, y + rng.choice([-2, -1, 1, 2]) / it["height"]))
+            it["boxes"].insert(rng.randrange(len(it["boxes"]) + 1), [row[0], f"{x:.6f}", f"{y:.6f}", row[3], row[4]])
             self.mark(it, kind)
         elif kind == "scene_leak":
             it = rng.choice(self.free())
@@ -451,11 +454,13 @@ def main() -> int:
     ap = argparse.ArgumentParser(description="Tạo lô bàn giao có lỗi gài theo seed")
     ap.add_argument("--seed", type=int, required=True)
     ap.add_argument("--out", required=True)
-    ap.add_argument("--pool", default="practice", choices=["practice", "test"])
+    ap.add_argument("--pool", default="practice", choices=["practice", "calib", "test"])
     ap.add_argument("--opaque", action="store_true", help="đề ẩn: đổi tên, đánh số lại id, đổi byte ảnh/mask")
     ap.add_argument("--dev-truth", action="store_true", help="in ground truth ra màn hình")
-    ap.add_argument("--no-faults", action="store_true", help="lô sạch, không gài lỗi (để đo nhiễu tự nhiên)")
+    ap.add_argument("--no-faults", action="store_true", help="lô sạch, không gài lỗi, trên pool calib (50 ảnh khác bộ luyện tập) để đo nhiễu tự nhiên")
     args = ap.parse_args()
+    if args.no_faults and args.pool == "practice":
+        args.pool = "calib"  # lô sạch KHÔNG dùng 250 ảnh luyện tập: diff với lô luyện tập sẽ lộ đáp án
     b = Builder(args)
     b.load()
     b.organize()
@@ -467,7 +472,7 @@ def main() -> int:
         for row in b.truth:
             print(row)
         print(b.trace_truth)
-    print(f"seed={args.seed} pool={args.pool} images={len(b.items)} faults={len(b.truth)} release_id={rid}")
+    print(f"seed={args.seed} pool={args.pool} images={len(b.items)} release_id={rid}")
     print(f"delivery: {b.out / 'delivery'}   (validator KHÔNG đọc {b.out / '_private'})")
     return 0
 

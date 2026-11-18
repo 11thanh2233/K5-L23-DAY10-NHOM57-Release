@@ -30,7 +30,8 @@ INSTANCES_URL = "http://images.cocodataset.org/annotations/annotations_trainval2
 PANOPTIC_URL = "http://images.cocodataset.org/annotations/panoptic_annotations_trainval2017.zip"
 IMAGE_URL = "http://images.cocodataset.org/val2017/{name}"
 SAMPLE_COUNT = 250
-POOLS = {"practice": (0, 250), "test": (250, 500)}
+POOLS = {"practice": (0, 250), "test": (250, 500), "calib": (500, 550)}
+SUFFIX = {"practice": "", "test": "_test", "calib": "_calib"}
 # Official 80 instance categories, in the order used by YOLO COCO labels.
 COCO80 = [
     1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25,
@@ -127,7 +128,7 @@ def choose_ids(instances: dict, panoptic: dict, pool: str = "practice") -> list[
     panoptic_ids = {ann["image_id"] for ann in panoptic["annotations"]}
     start, stop = POOLS[pool]
     chosen = sorted(boxed & panoptic_ids)[start:stop]
-    if len(chosen) < SAMPLE_COUNT:
+    if len(chosen) < stop - start:
         raise SystemExit(f"only {len(chosen)} images have both a box and a panoptic mask")
     return chosen
 
@@ -165,6 +166,12 @@ def download_coco128(root: Path) -> None:
 
 
 def download_coco250(root: Path, pool: str = "practice") -> None:
+    suffix_, count_ = SUFFIX[pool], POOLS[pool][1] - POOLS[pool][0]
+    done_dir = root / f"coco_panoptic250{suffix_}"
+    if (done_dir / "panoptic.json").is_file() and len(list((done_dir / "masks").glob("*.png"))) >= count_ \
+            and len(list((root / f"coco250{suffix_}" / "images" / "train2017").glob("*.jpg"))) >= count_:
+        print(f"đã có coco250{suffix_} ({count_} ảnh), bỏ qua")
+        return
     cache = root / "cache"
     instances_zip = cache / "annotations_trainval2017.zip"
     panoptic_zip = cache / "panoptic_annotations_trainval2017.zip"
@@ -183,7 +190,8 @@ def download_coco250(root: Path, pool: str = "practice") -> None:
     class_of = {category_id: index for index, category_id in enumerate(COCO80)}
     panoptic_members = zip_names(mask_zip)
 
-    suffix = "" if pool == "practice" else "_test"
+    suffix = SUFFIX[pool]
+    count = POOLS[pool][1] - POOLS[pool][0]
     detect = root / f"coco250{suffix}"
     images_dir = detect / "images" / "train2017"
     labels_dir = detect / "labels" / "train2017"
@@ -197,7 +205,7 @@ def download_coco250(root: Path, pool: str = "practice") -> None:
     with ThreadPoolExecutor(max_workers=16) as pool_:
         for done, _ in enumerate(pool_.map(lambda im: download(IMAGE_URL.format(name=im["file_name"]), images_dir / im["file_name"]), todo), start=1):
             if done % 50 == 0 or done == len(todo):
-                print(f"images {done}/{len(todo)}")
+                print(f"images {done}/{len(todo)}", flush=True)
     with zipfile.ZipFile(mask_zip) as zmask:
         for index, image_id in enumerate(chosen, start=1):
             image = by_id[image_id]
@@ -216,8 +224,8 @@ def download_coco250(root: Path, pool: str = "practice") -> None:
                 with zmask.open(info) as src, mask.open("wb") as handle:
                     shutil.copyfileobj(src, handle)
             link_or_copy(jpg, panoptic_root / "images" / jpg.name)
-            if index % 50 == 0 or index == SAMPLE_COUNT:
-                print(f"coco250{suffix} {index}/{SAMPLE_COUNT}")
+            if index % 50 == 0 or index == count:
+                print(f"coco250{suffix} {index}/{count}", flush=True)
 
     chosen_set = set(chosen)
     subset = {
@@ -231,7 +239,7 @@ def download_coco250(root: Path, pool: str = "practice") -> None:
         "source": "COCO val2017",
         "task_detection": "YOLO labels converted from instances_val2017.json",
         "task_panoptic": "COCO panoptic val2017",
-        "count": SAMPLE_COUNT,
+        "count": count,
         "rule": f"Image ids present in both non-crowd instance boxes and panoptic_val2017, sorted ascending, positions {POOLS[pool][0] + 1}-{POOLS[pool][1]}.",
         "image_ids": chosen,
         "detection_dir": f"data_source/coco250{suffix}",
@@ -245,7 +253,7 @@ def download_coco250(root: Path, pool: str = "practice") -> None:
     jpg_count = len(list(images_dir.glob("*.jpg")))
     txt_count = len(list(labels_dir.glob("*.txt")))
     png_count = len(list(mask_dir.glob("*.png")))
-    if jpg_count < SAMPLE_COUNT or txt_count < SAMPLE_COUNT or png_count < SAMPLE_COUNT:
+    if jpg_count < count or txt_count < count or png_count < count:
         raise SystemExit(f"incomplete coco250{suffix}: {jpg_count} jpg, {txt_count} txt, {png_count} png")
     print(f"ready coco250{suffix}: {jpg_count} images, {txt_count} labels")
     print(f"ready coco_panoptic250{suffix}: {png_count} masks, panoptic.json")
@@ -255,7 +263,7 @@ def download_coco250(root: Path, pool: str = "practice") -> None:
 def main() -> None:
     parser = argparse.ArgumentParser(description="Download the public lab dataset")
     parser.add_argument("--dataset", default="coco250", choices=["coco250", "coco128"])
-    parser.add_argument("--pool", default="practice", choices=sorted(POOLS), help="test = 250 ảnh cho đề ẩn của giảng viên")
+    parser.add_argument("--pool", default="practice", choices=sorted(POOLS), help="practice (mặc định, tải kèm calib) = 250 ảnh luyện tập; calib = 50 ảnh khác để đo nhiễu lô sạch; test = đề ẩn (giảng viên)")
     parser.add_argument("--root", default="data_source")
     args = parser.parse_args()
     root = Path(args.root).resolve()
@@ -263,7 +271,9 @@ def main() -> None:
     if args.dataset == "coco128":
         download_coco128(root)
     else:
-        download_coco250(root, args.pool)
+        pools = ["practice", "calib"] if args.pool == "practice" else [args.pool]
+        for pool in pools:
+            download_coco250(root, pool)
 
 
 if __name__ == "__main__":

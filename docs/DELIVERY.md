@@ -37,7 +37,7 @@ runs/lineage.jsonl          # nhật ký lineage của mọi lô
 | | `wrong_hash` | sha256 ghi trong manifest không phải của file đó |
 | | `invalid_class` | class_id ngoài 0–79 |
 | | `bbox_out_of_bounds` | box vượt ra ngoài ảnh |
-| | `duplicate_box` | một vật được gán hai box gần như trùng nhau |
+| | `duplicate_box` | một box bị lặp: cùng lớp, cùng kích thước, lệch 1–2 pixel |
 | | `scene_leak` | một cảnh có ảnh ở cả train và val |
 | | `guideline_mismatch` | guideline của ảnh khác guideline ghi ở job của nó |
 | Luật (panoptic) | `invalid_category_id` | category_id không có trong `categories` |
@@ -50,7 +50,7 @@ runs/lineage.jsonl          # nhật ký lineage của mọi lô
 
 Lỗi gán nhãn không chứng minh được bằng một file:
 - **Ghép** box detection với segment panoptic của cùng ảnh. Lệch lớp, lệch vị trí, hoặc số vật không khớp là **ứng viên**.
-- **Lô sạch cũng có ứng viên**, vì COCO vốn lệch giữa hai nguồn (vật bị che, crowd). Muốn đo mức nhiễu này, tạo một lô sạch: `python scripts/inject_release.py --seed 5 --no-faults --out runs/clean`.
+- **Lô sạch cũng có thể có ứng viên**, vì COCO vốn lệch giữa hai nguồn (vật bị che, crowd). Số lượng tuỳ cách ghép. Muốn đo, tạo một lô sạch: `python scripts/inject_release.py --seed 5 --no-faults --out runs/clean`. Lô sạch dùng **50 ảnh khác** bộ luyện tập (pool `calib`), nên không so được với lô luyện tập.
 - **Mở ảnh** để quyết định. Khi detection và panoptic bất đồng về lớp, ảnh cho biết bên nào sai (`class_swap` hay `category_swap`).
 
 ## 3. File nhóm nộp
@@ -63,7 +63,9 @@ Lỗi gán nhãn không chứng minh được bằng một file:
 
 `review_log.csv` (mẫu: `templates/review_log.csv`): `image,type,verdict,note`, với `verdict` là `confirmed` hoặc `rejected`. Mọi lỗi gán nhãn trong `errors.json` phải có một dòng `confirmed`.
 
-`trace.json` (mẫu: `templates/trace.json`): `tier_a`, `tier_b` (tên ảnh), `notify` (mã người).
+`trace.json` (mẫu: `templates/trace.json`): `tier_a`, `tier_b` (tên ảnh), `notify` (mã người). "Có lớp bị đổi quy tắc" nghĩa là có ít nhất một **box detection** lớp đó trong `labels/` của lô.
+
+Lô v2 bàn giao là sản phẩm **detection**: xem [GUIDE.md](../GUIDE.md) Pha 4 để biết ảnh nào vào rework, ảnh nào ở lại.
 
 ## 4. Chấm
 

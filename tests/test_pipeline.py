@@ -65,11 +65,15 @@ class ReleaseTest(unittest.TestCase):
             self.assertEqual(out.returncode, 1)
             self.assertIn("FAIL", out.stdout)
 
+    @unittest.skipUnless((ROOT / "data_source" / "coco_panoptic250_calib" / "panoptic.json").is_file(), "chưa có pool calib")
     def test_clean_delivery_has_no_truth(self):
         with tempfile.TemporaryDirectory() as tmp:
             c = Path(tmp) / "c"
             run("inject_release.py", "--seed", "5", "--no-faults", "--out", str(c))
             self.assertEqual(json.loads((c / "_private" / "truth.json").read_text(encoding="utf-8"))["errors"], [])
+            # lô sạch không dùng ảnh luyện tập (diff sẽ lộ đáp án)
+            practice = {p.name for p in (ROOT / "data_source" / "coco250" / "images" / "train2017").glob("*.jpg")}
+            self.assertFalse(practice & {p.name for p in (c / "delivery" / "images").glob("*.jpg")})
 
 
 @unittest.skipUnless(HAVE_TEST, "chưa có pool test (giảng viên): python scripts/download_public.py --pool test")

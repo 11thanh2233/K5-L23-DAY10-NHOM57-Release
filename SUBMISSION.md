@@ -12,7 +12,7 @@ Theo hướng dẫn lớp nếu giảng viên đặt quy ước khác.
 
 ## Trước khi nộp
 
-1. Đổi dòng tiêu đề `README.md` thành `# Day 10 Lab — Nhóm <XX>`.
+1. Đổi dòng tiêu đề `# Day 10 Lab — ...` trong `README.md` (ngay dưới ảnh hero) thành `# Day 10 Lab — Nhóm <XX>`.
 2. Chép bài làm của seed luyện tập: `python scripts/export_submission.py --run runs/r<seed>`
 3. `python scripts/check_handover.py --run runs/r<seed>` không còn FAIL.
 4. Bài đề ẩn nằm trong `submission/de_an/` (không commit thư mục `delivery/` của đề).
@@ -21,7 +21,7 @@ Theo hướng dẫn lớp nếu giảng viên đặt quy ước khác.
 ## Cấu trúc bắt buộc
 
 ```text
-README.md                           # dòng đầu: # Day 10 Lab — Nhóm <XX>
+README.md                           # tiêu đề: # Day 10 Lab — Nhóm <XX>
 validator/
 └── validate.py                     # NHÓM TỰ VIẾT: validate.py <delivery> --out errors.json [--candidates c.json]
 submission/
