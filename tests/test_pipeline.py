@@ -56,7 +56,7 @@ class ReleaseTest(unittest.TestCase):
             self.assertEqual(len(targets), len(set(targets)))
             (a / "errors.json").write_text(json.dumps({"errors": truth["errors"]}), encoding="utf-8")
             shutil.copyfile(a / "_private" / "trace_truth.json", a / "trace.json")
-            run("score_findings.py", "--run", str(a))
+            run("score_findings.py", "--run", str(a), "--truth-dir", str(a / "_private"))
             report = json.loads((a / "metrics.json").read_text(encoding="utf-8"))
             self.assertEqual(report["score"]["overall"]["f1"], 1.0)
             self.assertEqual(report["trace"]["tier_b"]["f1"], 1.0)
@@ -82,7 +82,7 @@ class HiddenTest(unittest.TestCase):
         import hashlib
         with tempfile.TemporaryDirectory() as tmp:
             h = Path(tmp) / "h"
-            run("inject_release.py", "--seed", "93751", "--pool", "test", "--opaque", "--out", str(h))
+            run("inject_release.py", "--seed", "1234", "--pool", "test", "--opaque", "--out", str(h))
             src = ROOT / "data_source"
             coco = {hashlib.sha256(p.read_bytes()).hexdigest() for p in (src / "coco250_test" / "images" / "train2017").glob("*.jpg")}
             coco |= {hashlib.sha256(p.read_bytes()).hexdigest() for p in (src / "coco_panoptic250_test" / "masks").glob("*.png")}

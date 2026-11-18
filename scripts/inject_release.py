@@ -2,7 +2,7 @@
 """Tạo MỘT lô bàn giao (detection + panoptic cùng 250 ảnh) có lỗi gài theo seed.
 
   python scripts/inject_release.py --seed 11 --out runs/r11
-  python scripts/inject_release.py --seed 93751 --pool test --opaque --out hidden/r93751   # giảng viên
+  python scripts/inject_release.py --seed 5 --no-faults --out runs/clean        # lô sạch (pool calib)
 
 Mọi lựa chọn ngẫu nhiên đi qua random.Random(seed). Cùng seed, cùng pool, cùng dữ liệu
 nguồn thì ra cùng delivery và cùng ground truth.
@@ -12,8 +12,8 @@ Lỗi gán nhãn (class_swap, bbox_drift, missing_box, category_swap, instance_m
 có nhãn gốc nào trong delivery để so: chỉ thấy khi đối chiếu detection với panoptic,
 rồi nhìn ảnh để quyết định bên nào sai.
 
---opaque (đề ẩn): đổi tên ảnh thành img_NNNN, đánh số lại image id và segment id, ghi lại
-mask và chèn một đoạn comment vào jpg, để tên/hash không tra ngược được về COCO.
+Đề ẩn do giảng viên tạo bằng công cụ riêng (--opaque, --profile và các bước xử lý ảnh khác);
+mức lỗi trong đề ẩn có thể khác mặc định ở đây.
 Validator không được đọc <out>/_private.
 """
 
@@ -39,7 +39,7 @@ DET_RULE = ["missing_image", "wrong_hash", "invalid_class", "bbox_out_of_bounds"
 DET_CROSS = ["class_swap", "bbox_drift", "missing_box"]
 PAN_RULE = ["invalid_category_id", "thing_overlap"]
 PAN_CROSS = ["category_swap", "instance_merge"]
-# (min, max) số lần mỗi loại. Học viên không được biết trước.
+# Mặc định cho lô luyện tập. Đề ẩn dùng --profile (JSON) của giảng viên để đổi các mức này.
 COUNTS = {
     "missing_image": (0, 2), "wrong_hash": (1, 2), "invalid_class": (0, 2), "bbox_out_of_bounds": (1, 2),
     "duplicate_box": (1, 2), "scene_leak": (1, 1), "guideline_mismatch": (1, 2),
@@ -53,6 +53,14 @@ CONFUSABLE = [
     ["laptop", "tv"], ["cell phone", "remote"], ["handbag", "backpack", "suitcase"],
     ["orange", "apple"], ["donut", "cake"], ["bird", "kite"],
 ]
+PROFILE = {
+    "counts": COUNTS,
+    "drift": [0.12, 0.3],          # độ lệch tâm, tính theo kích thước box
+    "drift_scale": 0.2,            # đổi cỡ box tối đa ±20% (một nửa số ca)
+    "swap_confusable": 0.7,        # xác suất đổi sang lớp dễ nhầm (còn lại: lớp bất kỳ)
+    "min_box_area": 0.005,         # box bị đổi lớp/lệch phải chiếm >= 0.5% ảnh (nhìn được bằng mắt)
+    "min_segment_px": 1024,        # segment bị đổi lớp/gộp phải >= 1024 pixel
+}
 ANNOTATORS = ["A01", "A02", "A03", "A04", "A05"]
 REVIEWERS = ["Q01", "Q02", "Q03"]
 SCENE_SIZE = 5
@@ -100,6 +108,9 @@ def perturb_jpg(data: bytes, rng: random.Random) -> bytes:
 class Builder:
     def __init__(self, args):
         self.rng = random.Random(args.seed)
+        self.p = dict(PROFILE)
+        if getattr(args, "profile", None):
+            self.p.update(json.loads(Path(args.profile).read_text(encoding="utf-8")))
         self.seed = args.seed
         suffix = {"practice": "", "test": "_test", "calib": "_calib"}[args.pool]
         self.det_src = ROOT / "data_source" / f"coco250{suffix}"
@@ -257,23 +268,34 @@ class Builder:
             it["guideline"] = "v1.2" if it["guideline"] == "v1.3" else "v1.3"
             self.mark(it, kind)
         elif kind == "class_swap":
-            def ok(i):
-                return any(self.partner(self.name80(r[0])) for r in i["boxes"])
-            it = rng.choice(self.free(ok))
-            row = rng.choice([r for r in it["boxes"] if self.partner(self.name80(r[0]))])
+            big = self.p["min_box_area"]
+            conf = rng.random() < self.p["swap_confusable"]
+
+            def eligible(r):
+                return float(r[3]) * float(r[4]) >= big and (not conf or self.partner(self.name80(r[0])))
+            it = rng.choice(self.free(lambda i: any(eligible(r) for r in i["boxes"])))
+            row = rng.choice([r for r in it["boxes"] if eligible(r)])
             before = self.name80(row[0])
-            after = rng.choice(self.partner(before))
+            pool = self.partner(before) if conf else [n for n in (self.cat_by_id[c]["name"] for c in COCO80) if n != before]
+            after = rng.choice(pool)
             row[0] = str(COCO80.index(self.cat_by_name[after]))
             self.mark(it, kind, from_class=before, to_class=after)
         elif kind == "bbox_drift":
-            def ok(i):
-                return any(float(r[3]) > 0.08 and float(r[4]) > 0.08 for r in i["boxes"])
-            it = rng.choice(self.free(ok))
-            row = rng.choice([r for r in it["boxes"] if float(r[3]) > 0.08 and float(r[4]) > 0.08])
-            x, w = float(row[1]), float(row[3])
-            shift = w * rng.uniform(0.15, 0.3) * rng.choice([-1, 1])
-            nx = min(1 - w / 2, max(w / 2, x + shift))
-            row[1] = f"{nx:.6f}"
+            import math
+
+            def ok_box(r):
+                return float(r[3]) > 0.08 and float(r[4]) > 0.08 and float(r[3]) * float(r[4]) >= self.p["min_box_area"]
+            it = rng.choice(self.free(lambda i: any(ok_box(r) for r in i["boxes"])))
+            row = rng.choice([r for r in it["boxes"] if ok_box(r)])
+            x, y, w, h = map(float, row[1:5])
+            ang = rng.uniform(0, 2 * math.pi)  # hướng bất kỳ, không chỉ ngang
+            mag = rng.uniform(*self.p["drift"])
+            if rng.random() < 0.5:             # một nửa số ca đổi cỡ box
+                s = 1 + rng.uniform(-self.p["drift_scale"], self.p["drift_scale"])
+                w, h = min(1.0, w * s), min(1.0, h * s)
+            x = min(1 - w / 2, max(w / 2, x + math.cos(ang) * mag * w))
+            y = min(1 - h / 2, max(h / 2, y + math.sin(ang) * mag * h))
+            row[1:5] = [f"{x:.6f}", f"{y:.6f}", f"{w:.6f}", f"{h:.6f}"]
             self.mark(it, kind)
         elif kind == "missing_box":
             def ok(i):
@@ -330,12 +352,15 @@ class Builder:
                 return
             raise SystemExit("không đủ ảnh cho thing_overlap")
         elif kind == "category_swap":
-            def ok(i):
-                return any(self.partner(self.cat_by_id[s["category_id"]]["name"]) for s in self.segs(i))
-            it = rng.choice(self.free(ok))
-            seg = rng.choice([s for s in self.segs(it) if self.partner(self.cat_by_id[s["category_id"]]["name"])])
+            conf = rng.random() < self.p["swap_confusable"]
+
+            def eligible(s):
+                return s.get("area", 0) >= self.p["min_segment_px"] and (not conf or self.partner(self.cat_by_id[s["category_id"]]["name"]))
+            it = rng.choice(self.free(lambda i: any(eligible(s) for s in self.segs(i))))
+            seg = rng.choice([s for s in self.segs(it) if eligible(s)])
             before = self.cat_by_id[seg["category_id"]]["name"]
-            after = rng.choice(self.partner(before))
+            pool = self.partner(before) if conf else sorted(self.cat_by_id[c]["name"] for c in self.things if self.cat_by_id[c]["name"] != before)
+            after = rng.choice(pool)
             seg["category_id"] = self.cat_by_name[after]
             self.mark(it, kind, from_class=before, to_class=after)
         elif kind == "instance_merge":
@@ -343,7 +368,7 @@ class Builder:
                 g = {}
                 for s in self.segs(i):
                     g.setdefault(s["category_id"], []).append(s)
-                return [v for v in g.values() if len(v) >= 2]
+                return [v for v in g.values() if len(v) >= 2 and sorted(s.get("area", 0) for s in v)[0] >= self.p["min_segment_px"] // 2]
             it = rng.choice(self.free(lambda i: groups(i)))
             pair = sorted(rng.choice(groups(it)), key=lambda s: s.get("area", 0))
             removed, kept = pair[0], pair[-1]
@@ -361,7 +386,7 @@ class Builder:
 
     def inject(self):
         kinds = []
-        for kind, (lo, hi) in COUNTS.items():
+        for kind, (lo, hi) in self.p["counts"].items():
             kinds += [kind] * self.rng.randint(lo, hi)
         self.rng.shuffle(kinds)
         for kind in kinds:
@@ -378,7 +403,13 @@ class Builder:
         for it in old:
             for name in {self.name80(r[0]) for r in it["boxes"] if r[0].isdigit() and int(r[0]) < 80}:
                 freq[name] = freq.get(name, 0) + 1
-        choices = sorted(n for n, c in freq.items() if 6 <= c and n != "person") or sorted(freq)
+        old_jobs = sorted({it["job"] for it in old})
+
+        def jobs_with(name):
+            return {it["job"] for it in old if name in {self.name80(r[0]) for r in it["boxes"] if int(r[0]) < 80}}
+        base = sorted(n for n, c in freq.items() if 6 <= c and n != "person") or sorted(freq)
+        # ưu tiên lớp KHÔNG có mặt ở mọi job cũ: báo hết người của mọi job cũ sẽ bị trừ điểm
+        choices = [n for n in base if len(jobs_with(n)) < len(old_jobs)] or base
         self.rule_class = rng.choice(choices)
         has = [it for it in old if self.rule_class in {self.name80(r[0]) for r in it["boxes"] if int(r[0]) < 80}]
         scenes = sorted({it["scene"] for it in has})
@@ -442,6 +473,7 @@ class Builder:
             "Nhờ team dữ liệu kiểm tra và cho biết còn ảnh nào khác bị như vậy không.\n", encoding="utf-8")
         release_id = "lab250_" + sha((d / "manifest.json").read_bytes() + (d / "metadata.json").read_bytes())[:12]
         (d / "release.json").write_text(json.dumps({"release_id": release_id, "version": "v1",
+                                                     "panoptic_sha256": sha((d / "panoptic.json").read_bytes()),
                                                      "note": "Ảnh COCO val2017; scene, job, người gán là giả lập."}, indent=2) + "\n", encoding="utf-8")
         p = self.out / "_private"
         p.mkdir()
@@ -456,6 +488,7 @@ def main() -> int:
     ap.add_argument("--out", required=True)
     ap.add_argument("--pool", default="practice", choices=["practice", "calib", "test"])
     ap.add_argument("--opaque", action="store_true", help="đề ẩn: đổi tên, đánh số lại id, đổi byte ảnh/mask")
+    ap.add_argument("--profile", help="JSON đổi mức lỗi (giảng viên dùng cho đề ẩn)")
     ap.add_argument("--dev-truth", action="store_true", help="in ground truth ra màn hình")
     ap.add_argument("--no-faults", action="store_true", help="lô sạch, không gài lỗi, trên pool calib (50 ảnh khác bộ luyện tập) để đo nhiễu tự nhiên")
     args = ap.parse_args()

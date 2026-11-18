@@ -9,4 +9,4 @@
 <<Mở job được giao trên máy công ty; chụp màn hình gửi người quen; chép lô ra USB; dán nhãn thật lên chatbot; đưa tài khoản CVAT cho đồng nghiệp. Mỗi việc: được/không, vì sao.>>
 
 ## 3. Ca khuôn mặt: thấy mặt người rõ trong lô, guideline yêu cầu làm mờ
-<<Bạn làm gì, trạng thái lô là gì (Hold), báo ai, vì sao không tự làm mờ hay xoá ảnh. Lô COCO của bài có ảnh nào như vậy không (nêu tên)?>>
+<<Bạn làm gì, trạng thái lô là gì, báo ai, vì sao không tự làm mờ hay xoá ảnh. Nêu tên ít nhất một ảnh trong lô của nhóm có mặt người nhìn rõ.>>

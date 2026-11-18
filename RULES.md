@@ -17,7 +17,8 @@
 - Không bịa F1, kết quả review, hash, người gán/kiểm. Mọi số trong `README.txt` và `REPORT.md` phải lấy từ file thật.
 - Không sửa `delivery/` (lô v1). Bản sửa là v2.
 - Không sửa `scripts/` để qua bộ kiểm. Tìm thấy bug thật thì ghi vào `REPORT.md` và báo giảng viên.
-- Không chạy `--dev-truth` hay đọc `_private/` để chỉnh ngưỡng. Giảng viên có thể hỏi nhóm đã chọn ngưỡng bằng cách nào.
+- Không chạy `--dev-truth`, không đọc `_private/`, không dùng `score_findings.py --truth-dir` (chế độ của giảng viên). Giảng viên có thể hỏi nhóm đã chọn ngưỡng bằng cách nào.
+- `score_findings.py` chỉ để **tự đo** validator tốt lên hay kém đi (in F1 làm tròn). **Dò đáp án** bằng cách nộp thử từng phần danh sách rồi xem điểm đổi thế nào cũng là đọc `_private` gián tiếp: bị coi là gian lận. `review_log.csv` phải là kết quả xem ảnh, không phải kết quả dò điểm.
 
 ## Dùng AI
 

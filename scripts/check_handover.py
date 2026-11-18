@@ -48,6 +48,38 @@ class Report:
         return 1 if fails else 0
 
 
+def file_rule_errors(d: Path, man: dict, meta: dict, jobs: dict) -> set:
+    """Lỗi luật mức file bộ kiểm tự thấy được, để errors.json rỗng hoặc thiếu không qua được."""
+    out = set()
+    scenes = {}
+    for name, it in man.items():
+        m = meta[name]
+        scenes.setdefault(m["scene_id"], set()).add(m["split"])
+        img = d / it["image"]
+        if not img.is_file():
+            out.add(("missing_image", name))
+            continue
+        if sha(img) != it["image_sha256"]:
+            out.add(("wrong_hash", name))
+            continue
+        if m["guideline_version"] != jobs[m["job_id"]]["guideline"]:
+            out.add(("guideline_mismatch", name))
+            continue
+        for ln in (d / it["label"]).read_text(encoding="utf-8").splitlines():
+            if not ln.strip():
+                continue
+            c, x, y, w, h = ln.split()[:5]
+            c, x, y, w, h = int(float(c)), float(x), float(y), float(w), float(h)
+            if not 0 <= c < 80:
+                out.add(("invalid_class", name))
+                break
+            if x - w / 2 < -0.01 or y - h / 2 < -0.01 or x + w / 2 > 1.01 or y + h / 2 > 1.01:
+                out.add(("bbox_out_of_bounds", name))
+                break
+    out |= {("scene_leak", sc) for sc, v in scenes.items() if len(v) > 1}
+    return out
+
+
 def read_csv(path: Path) -> list[dict]:
     with path.open(encoding="utf-8", newline="") as f:
         return list(csv.DictReader(f))
@@ -77,19 +109,28 @@ def main() -> int:
 
     # H1 v1 giữ nguyên
     now = "lab250_" + hashlib.sha256((d / "manifest.json").read_bytes() + (d / "metadata.json").read_bytes()).hexdigest()[:12]
-    labels_ok = all(sha(d / it["label"]) == it["label_sha256"] for it in man.values())
+    rel = json.loads((d / "release.json").read_text(encoding="utf-8"))
+    labels_ok = all(sha(d / it["label"]) == it["label_sha256"] and sha(d / it["mask"]) == it["mask_sha256"] for it in man.values()) \
+        and rel.get("panoptic_sha256") in (None, sha(d / "panoptic.json"))
     r.check("H1", now == rid and labels_ok, f"v1 ({rid}) giữ nguyên", "delivery v1 đã bị sửa: không ghi đè lô đã giao, làm bản v2")
 
     # H2 errors.json + review_log
     errors = json.loads((run / "errors.json").read_text(encoding="utf-8"))["errors"] if (run / "errors.json").is_file() else None
-    r.check("H2", errors is not None, f"errors.json có {len(errors or [])} lỗi", "thiếu errors.json")
     errors = errors or []
+    must = file_rule_errors(d, man, meta, jobs)
+    have = {(e["type"], e["target"]) for e in errors}
+    r.check("H2", (run / "errors.json").is_file() and must <= have, f"errors.json có {len(errors)} lỗi, gồm đủ lỗi luật mức file",
+            f"errors.json thiếu {len(must - have)} lỗi luật mức file (missing_image, wrong_hash, guideline_mismatch, scene_leak, "
+            "invalid_class, bbox_out_of_bounds) mà bộ kiểm tự thấy được: chạy lại validator")
     log = read_csv(run / "review_log.csv") if (run / "review_log.csv").is_file() else []
     confirmed = {(row.get("type", "").strip(), row.get("image", "").strip()) for row in log if row.get("verdict", "").strip() == "confirmed"}
     need = {(e["type"], e["target"]) for e in errors if e["type"] in metrics.SEMANTIC_TYPES}
-    r.check("H3", log and need <= confirmed,
-            f"review_log.csv: {len(log)} dòng, mọi lỗi gán nhãn đã được xem ảnh và xác nhận",
-            f"review_log.csv phải có dòng verdict=confirmed cho mỗi lỗi gán nhãn trong errors.json (thiếu {sorted(need - confirmed)[:4]})")
+    notes = [(row.get("note") or "").strip() for row in log]
+    notes_ok = notes and all(len(n) >= 20 for n in notes) and len(set(notes)) >= 0.7 * len(notes)
+    r.check("H3", log and need <= confirmed and notes_ok,
+            f"review_log.csv: {len(log)} dòng, mọi lỗi gán nhãn đã được xem ảnh và xác nhận, ghi chú cụ thể",
+            "review_log.csv phải có dòng verdict=confirmed cho mỗi lỗi gán nhãn trong errors.json "
+            f"(thiếu {len(need - confirmed)}), và mỗi ghi chú ≥ 20 ký tự, không chép giống nhau (nói rõ thấy gì trong ảnh)")
 
     # Lô v2
     v2 = run / "handover" / f"{rid}_v2"
@@ -103,9 +144,11 @@ def main() -> int:
     rework = read_csv(v2 / "rework_queue.csv")
     rq = {row["image"] for row in rework}
     bad_imgs = {e["target"] for e in errors if e["target"] in man and e["type"] in DET_REWORK}
-    r.check("H5", stems == lab_stems and bad_imgs <= rq and not (rq & set(stems)),
+    reported = {e["target"] for e in errors}
+    r.check("H5", stems == lab_stems and bad_imgs <= rq and rq <= reported and not (rq & set(stems)),
             f"v2 có {len(stems)} ảnh; {len(rq)} ảnh lỗi chuyển sang rework_queue, không nằm trong v2",
-            "mỗi ảnh có lỗi nhãn detection hoặc thiếu file phải vào rework_queue.csv và rời khỏi v2 (lỗi panoptic thì ảnh ở lại); images/ và labels/ phải khớp nhau")
+            "mỗi ảnh có lỗi nhãn detection hoặc thiếu file phải vào rework_queue.csv và rời khỏi v2 (lỗi panoptic thì ảnh ở lại); "
+            "ảnh trong rework_queue phải có lỗi trong errors.json; images/ và labels/ phải khớp nhau")
     wrong_owner = [row["image"] for row in rework if row["image"] in meta and
                    (row.get("annotator") != jobs[meta[row["image"]]["job_id"]]["annotator"] or row.get("reviewer") != jobs[meta[row["image"]]["job_id"]]["reviewer"])]
     r.check("H6", not wrong_owner, "rework_queue ghi đúng người gán/người kiểm theo jobs.csv", f"sai người gán/kiểm: {wrong_owner[:4]}")
@@ -176,6 +219,8 @@ def main() -> int:
     if lp.is_file():
         events = [json.loads(x) for x in lp.read_text(encoding="utf-8").splitlines() if x.strip()]
     held = any(e.get("event") == "decision" and e.get("release_id") == rid and e.get("decision") == "HOLD" for e in events)
+    if held and v1_decision == "Release":
+        r.check("H13b", False, "", "README ghi 'Kết luận v1: Release' nhưng lineage ghi HOLD: hai nơi phải khớp")
     rel = any(e.get("event") == "release" and e.get("release_id") == f"{rid}_v2" and e.get("parent") == rid for e in events)
     r.check("H14", held and rel, "lineage: HOLD cho v1 và release v2 có parent v1",
             f"{lp}: cần decision HOLD cho {rid} và event release {rid}_v2 --parent {rid}")
@@ -198,8 +243,10 @@ def main() -> int:
     sec = (run / "security.md").read_text(encoding="utf-8") if (run / "security.md").is_file() else ""
     parts_ = [p for p in re.split(r"^##\s+", sec, flags=re.M)[1:] if len(re.sub(r"\s+", "", p.split("\n", 1)[-1])) >= 80]
     face = [p for p in parts_ if "khuôn mặt" in p.split("\n")[0].lower()]
-    r.check("H17", len(parts_) >= 3 and face and "Hold" in face[0], "security.md đủ 3 mục, ca khuôn mặt kết luận Hold",
-            "security.md cần ≥ 3 mục có nội dung; mục có tiêu đề chứa 'khuôn mặt' phải kết luận Hold")
+    names_in = face and any(n in face[0] for n in man)
+    r.check("H17", len(parts_) >= 3 and face and "hold" in face[0].lower() and names_in and "<<" not in sec,
+            "security.md đủ 3 mục, ca khuôn mặt kết luận Hold và nêu ảnh cụ thể trong lô",
+            "security.md cần ≥ 3 mục có nội dung (không còn <<...>>); mục 'khuôn mặt' phải kết luận Hold và nêu tên ít nhất một ảnh có người trong lô")
     return r.done()
 
 

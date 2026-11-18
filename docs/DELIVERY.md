@@ -31,6 +31,8 @@ runs/lineage.jsonl          # nhật ký lineage của mọi lô
 
 Đơn vị chấm là cặp `(type, target)`. `scene_leak` có target là `scene_id`; mọi loại khác có target là tên ảnh, không có đuôi. **Số lỗi mỗi loại thay đổi theo seed (có loại có thể vắng)**, và mỗi ảnh mang nhiều nhất một lỗi.
 
+Đề ẩn dùng ảnh khác, đã qua xử lý (lật, nén lại), và **mức lỗi có thể khác lô luyện tập**: số lượng, độ lệch của box, tỉ lệ đổi sang lớp dễ nhầm. Validator dựa vào đúng các tham số trong `inject_release.py` thay vì đối chiếu hai nguồn sẽ không đứng vững.
+
 | Nhóm | Loại | Nghĩa |
 |---|---|---|
 | Luật (detection) | `missing_image` | manifest có ảnh nhưng thiếu file |
@@ -73,7 +75,7 @@ Lô v2 bàn giao là sản phẩm **detection**: xem [GUIDE.md](../GUIDE.md) Pha
 python scripts/score_findings.py --run runs/r11
 ```
 
-Lệnh ghi `report.md` và `metrics.json` vào thư mục run.
+Lệnh in và ghi `report.md`: F1 tổng, F1 lỗi luật, F1 lỗi gán nhãn, F1 truy vết, **làm tròn một chữ số**. Đây là công cụ tự đo, không phải nơi dò đáp án (xem RULES). Giảng viên chấm đề ẩn bằng chế độ đầy đủ.
 
 | Số | Cách tính |
 |---|---|
@@ -83,4 +85,3 @@ Lệnh ghi `report.md` và `metrics.json` vào thư mục run.
 | F1 | trung bình điều hoà của precision và recall; đây là **rank F1** |
 
 - Report tách hai nhóm `rule_detectable` và `cross_check_review`, và chấm riêng truy vết (`tier_a`, `tier_b`, `notify`).
-- Quyết định in trong report chỉ nhìn danh sách nộp: `HOLD` nếu có ít nhất một lỗi, `RELEASE_CANDIDATE` nếu rỗng. Danh sách rỗng trên một lô có lỗi nghĩa là recall bằng 0.

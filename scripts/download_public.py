@@ -263,6 +263,7 @@ def download_coco250(root: Path, pool: str = "practice") -> None:
 def main() -> None:
     parser = argparse.ArgumentParser(description="Download the public lab dataset")
     parser.add_argument("--dataset", default="coco250", choices=["coco250", "coco128"])
+    parser.add_argument("--start", type=int, help="(giảng viên) vị trí bắt đầu của pool test trong danh sách ảnh hợp lệ")
     parser.add_argument("--pool", default="practice", choices=sorted(POOLS), help="practice (mặc định, tải kèm calib) = 250 ảnh luyện tập; calib = 50 ảnh khác để đo nhiễu lô sạch; test = đề ẩn (giảng viên)")
     parser.add_argument("--root", default="data_source")
     args = parser.parse_args()
@@ -271,6 +272,10 @@ def main() -> None:
     if args.dataset == "coco128":
         download_coco128(root)
     else:
+        if args.start is not None and args.pool == "test":
+            if args.start < 550:
+                raise SystemExit("--start phải >= 550 (không trùng ảnh luyện tập và calib)")
+            POOLS["test"] = (args.start, args.start + 250)
         pools = ["practice", "calib"] if args.pool == "practice" else [args.pool]
         for pool in pools:
             download_coco250(root, pool)

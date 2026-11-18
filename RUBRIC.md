@@ -12,22 +12,23 @@ Người nào không trả lời được thì phần điểm cá nhân (mục 6
 | # | Hạng mục | Điểm | Bằng chứng chính |
 |---|---|---:|---|
 | 1 | Bắt lỗi trên đề ẩn | 35 | `de_an/errors.json`, chấm bằng `score_findings.py` |
-| 2 | Review bằng mắt | 15 | `de_an/review_log.csv`, `submission/r<seed>/review_log.csv` |
+| 2 | Review bằng mắt | 15 | `de_an/review_log.csv` (chấm độ đúng); `submission/r<seed>/review_log.csv` (chỉ chấm cách ghi) |
 | 3 | Bàn giao v2 trên seed luyện tập | 25 | `submission/r<seed>/handover/`, `check_handover.py` |
 | 4 | Truy vết | 10 | `de_an/trace.json`, `submission/r<seed>/trace.json` |
 | 5 | Bảo mật | 5 | `security.md` |
 | 6 | Quy trình, trung thực, vấn đáp | 10 | lịch sử commit, `prompts.md`, `REPORT.md`, vấn đáp |
 
 ## 1. Bắt lỗi trên đề ẩn (35)
+Trước khi chấm, mọi lỗi gán nhãn trong `de_an/errors.json` **không có dòng `confirmed`** (ghi chú ≥ 20 ký tự) trong `de_an/review_log.csv` bị **bỏ ra**. Tự nhận hết ứng viên mà không xem ảnh chỉ được điểm như chỉ kiểm luật.
 - **20 — F1 tuyệt đối.** Điểm = 20 × `rank F1` (làm tròn 0,5). F1 thấp hơn 0,5 hoặc không có thì 0.
 - **10 — Xếp hạng giữa các nhóm** theo `rank F1`. Nhóm đứng đầu được 10, nhóm cuối được 2, các nhóm giữa nội suy.
 - **5 — Lỗi gán nhãn.** F1 của nhóm `cross_check_review` ≥ 0,6 được đủ điểm; từ 0,3 đến dưới 0,6 được một nửa.
 - *Trừ nặng:* validator đọc `data_source/`, annotation COCO, `_private/`, hoặc dùng mạng: **0 điểm mục 1** và báo giảng viên.
 
 ## 2. Review bằng mắt (15)
-- **8 — Mọi lỗi gán nhãn trong `errors.json` có dòng `confirmed`.** Ghi chú nói **thấy gì** trong ảnh. Ghi "có lỗi" hay "OK" thì chỉ được một nửa.
+- **8 — Đề ẩn: mọi lỗi gán nhãn trong `errors.json` có dòng `confirmed`.** Ghi chú nói **thấy gì** trong ảnh. Ghi "có lỗi" hay "OK" thì chỉ được một nửa. Ở seed luyện tập, nhóm có công cụ tự đo nên chỉ chấm cách ghi, không chấm độ đúng.
 - **4 — Phân biệt lỗi với lệch tự nhiên.** Có dòng `rejected` kèm lý do (vật bị che, crowd); nếu hàng đợi không có ca lệch tự nhiên thì `REPORT.md` cho thấy nhóm đã đo trên lô sạch và giải thích vì sao ngưỡng không gây báo thừa.
-- **3 — Phân biệt đúng `class_swap` / `category_swap`** dựa vào ảnh, không đoán.
+- **3 — Đề ẩn: phân biệt đúng `class_swap` / `category_swap`** dựa vào ảnh, không đoán.
 
 ## 3. Bàn giao v2 (25)
 - **10 — `check_handover.py` không còn FAIL** (H1–H17, chạy lại bằng bản gốc của script).

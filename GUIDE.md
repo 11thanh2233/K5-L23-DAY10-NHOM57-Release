@@ -73,7 +73,7 @@ Thử trên seed của nhóm và vài seed khác (tạo bằng `inject_release.p
 python validator/validate.py runs/r3007/delivery --out runs/r3007/errors.json
 python scripts/score_findings.py --run runs/r3007
 ```
-Nhóm `rule_detectable` nên đạt recall 1.0 và không báo thừa trên mọi seed. Thử thêm lô sạch: `python scripts/inject_release.py --seed 5 --no-faults --out runs/clean` (50 ảnh **khác** bộ luyện tập); luật phải không báo gì.
+Lỗi luật nên đạt F1 ≈ 1.0 trên mọi seed (`score_findings.py` chỉ in F1 làm tròn; đừng dùng nó để dò từng ảnh, xem RULES). Thử thêm lô sạch: `python scripts/inject_release.py --seed 5 --no-faults --out runs/clean` (50 ảnh **khác** bộ luyện tập); luật phải không báo gì.
 
 Được dùng AI (xem [RULES.md](RULES.md)), nhưng ghi prompt vào `submission/prompts.md`. Mỗi người phải giải thích được một đoạn validator khi vấn đáp.
 
