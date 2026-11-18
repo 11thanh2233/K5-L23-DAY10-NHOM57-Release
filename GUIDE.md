@@ -153,11 +153,11 @@ Tiêu chí dùng phiên bản guideline **ghi ở job** (`jobs.csv`), không dù
 ## Pha 6 — Bảo mật (10 phút) và đề ẩn (40 phút)
 
 1. **Bảo mật:** điền `runs/r<seed>/security.md` theo mẫu [templates/security.md](templates/security.md): ca USB, năm việc được/không, ca khuôn mặt (kết luận **Hold + báo người phụ trách**). COCO có ảnh người thật: nêu ví dụ từ lô của nhóm.
-2. **Đề ẩn:** giảng viên phát một thư mục `delivery/` lạ (tên ảnh dạng `img_0001`). Trong **40 phút**:
+2. **Đề ẩn (40 phút):** lúc giảng viên báo, vào tab **Releases** của repo đề, tải `de_an.zip` (hoặc nhận file từ LMS/nhóm chat), giải nén vào thư mục gốc repo nhóm, sẽ được thư mục `delivery/` (tên ảnh dạng `img_0001`). Rồi chạy:
    ```bash
-   python validator/validate.py <đề ẩn>/delivery --out de_an/errors.json --candidates de_an/candidates.json
+   python validator/validate.py delivery --out submission/de_an/errors.json --candidates submission/de_an/candidates.json
    ```
-   Xem ảnh ứng viên, ghi `de_an/review_log.csv`, chốt `de_an/errors.json`, làm `de_an/trace.json`, rồi nộp thư mục `de_an/` (xem [SUBMISSION.md](SUBMISSION.md)). Giảng viên chấm bằng `score_findings.py`.
+   Xem ảnh ứng viên, ghi `submission/de_an/review_log.csv`, chốt `errors.json`, làm `trace.json`, rồi commit và push (xem [SUBMISSION.md](SUBMISSION.md)). **Không commit thư mục `delivery/`** của đề ẩn.
 
 ## Lỗi hay gặp
 

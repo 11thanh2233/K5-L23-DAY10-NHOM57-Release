@@ -15,7 +15,7 @@ Theo hướng dẫn lớp nếu giảng viên đặt quy ước khác.
 1. Đổi dòng tiêu đề `README.md` thành `# Day 10 Lab — Nhóm <XX>`.
 2. Chép bài làm của seed luyện tập: `python scripts/export_submission.py --run runs/r<seed>`
 3. `python scripts/check_handover.py --run runs/r<seed>` không còn FAIL.
-4. Chép thư mục đề ẩn vào `submission/de_an/`.
+4. Bài đề ẩn nằm trong `submission/de_an/` (không commit thư mục `delivery/` của đề).
 5. Nộp link repo lên LMS **https://aithucchien.vinuni.edu.vn** hoặc kênh giảng viên/coach chỉ định.
 
 ## Cấu trúc bắt buộc
