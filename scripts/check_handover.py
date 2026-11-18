@@ -178,9 +178,12 @@ def main() -> int:
             f"{lp}: cần decision HOLD cho {rid} và event release {rid}_v2 --parent {rid}")
 
     # zip + sha256
-    z, s = v2.with_suffix(".zip"), v2.with_suffix(".sha256")
-    zok = z.is_file() and s.is_file() and s.read_text(encoding="utf-8").split()[0] == sha(z)
-    r.check("H15", zok, "zip khớp .sha256", "chạy python scripts/pack_release.py <thư mục v2> sau khi chốt lô")
+    # zip tái lập được: không có file zip (không commit) thì đóng gói lại trong bộ nhớ rồi so.
+    from pack_release import build_zip
+    s = v2.with_suffix(".sha256")
+    zok = s.is_file() and s.read_text(encoding="utf-8").split()[0] == hashlib.sha256(build_zip(v2)).hexdigest()
+    r.check("H15", zok, "đóng gói lại v2 ra đúng mã trong .sha256",
+            "chạy python scripts/pack_release.py <thư mục v2> sau khi chốt lô (mã .sha256 phải khớp nội dung hiện tại)")
 
     # trace + security
     tr = json.loads((run / "trace.json").read_text(encoding="utf-8")) if (run / "trace.json").is_file() else {}

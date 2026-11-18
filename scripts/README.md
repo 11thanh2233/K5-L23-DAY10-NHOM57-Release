@@ -1,0 +1,32 @@
+# Scripts của lab
+
+Chạy **từ thư mục gốc repo**. Python 3.10+, chỉ thư viện chuẩn. Mọi script có `--help`. **Không sửa** các script này (xem [RULES.md](../RULES.md)); validator do nhóm tự viết trong `validator/`.
+
+| Pha | Script | Việc | Ghi |
+|---|---|---|---|
+| 0 | `download_public.py` | tải 250 ảnh COCO + nhãn; `--pool test` cho đề ẩn | `data_source/` |
+| 0 | `run_lab.py` | tạo lô cho các seed, gắn `R-021` vào seed đầu | `runs/r<seed>/`, `runs/lineage.jsonl` |
+| 0 | `inject_release.py` | tạo một lô; `--no-faults` lô sạch; `--opaque` đề ẩn | `<out>/delivery`, `<out>/_private` |
+| 1–2 | `score_findings.py` | chấm `errors.json` + `trace.json` (F1) | `report.md`, `metrics.json` |
+| 1 | `pngutil.py` | đọc/ghi PNG RGB, đổi màu ↔ id segment | (thư viện) |
+| 3–4 | `lineage.py` | ghi `decision` / `release --parent`, hỏi `impact` | `runs/lineage.jsonl` |
+| 4 | `pack_release.py` | zip tái lập + sha256 | `<v2>.zip`, `<v2>.sha256` |
+| 4 | `check_handover.py` | kiểm phần bàn giao, mã H1–H17 | (màn hình) |
+| nộp | `export_submission.py` | `runs/` → `submission/`; `--import` cho người chấm | `submission/r<seed>/` |
+| | `metrics.py` | định nghĩa nhóm lỗi và công thức điểm | (thư viện) |
+
+## Mã kiểm của `check_handover.py`
+
+| Mã | Kiểm |
+|---|---|
+| H1 | v1 giữ nguyên (release_id và hash nhãn) |
+| H2–H3 | có `errors.json`; mọi lỗi gán nhãn có dòng `confirmed` trong `review_log.csv` |
+| H4–H7 | v2 đủ 7 phần; ảnh lỗi vào `rework_queue` và rời v2; đúng người gán/kiểm; nhãn không sửa tay |
+| H8–H9 | `manifest.csv` sha256 đúng; `label_summary.csv` khớp |
+| H10–H11 | `truyvet.csv` theo job; không còn cảnh rò train/val |
+| H12–H13 | `README.txt` số liệu khớp; QC v1 có mẫu số, kết luận đúng ngưỡng 2% |
+| H14 | lineage: HOLD v1, release v2 có parent |
+| H15 | đóng gói lại v2 ra đúng mã `.sha256` |
+| H16–H17 | `trace.json` đủ khoá; `security.md` đủ mục, ca khuôn mặt Hold |
+
+PASS là đúng **định dạng và nhất quán**, không có nghĩa nhãn đúng.

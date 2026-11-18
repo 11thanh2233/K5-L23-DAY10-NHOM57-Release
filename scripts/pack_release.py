@@ -16,6 +16,20 @@ from pathlib import Path
 SKIP = {".DS_Store", "Thumbs.db"}
 
 
+def build_zip(folder: Path) -> bytes:
+    """Zip tái lập: thứ tự file cố định, thời gian cố định, quyền cố định."""
+    import io
+    buf = io.BytesIO()
+    files = sorted(p for p in folder.rglob("*") if p.is_file() and p.name not in SKIP)
+    with zipfile.ZipFile(buf, "w", zipfile.ZIP_DEFLATED) as z:
+        for p in files:
+            info = zipfile.ZipInfo(f"{folder.name}/{p.relative_to(folder).as_posix()}", date_time=(2026, 1, 1, 0, 0, 0))
+            info.external_attr = 0o644 << 16
+            info.compress_type = zipfile.ZIP_DEFLATED
+            z.writestr(info, p.read_bytes())
+    return buf.getvalue()
+
+
 def main() -> int:
     ap = argparse.ArgumentParser(description="Zip tái lập + sha256")
     ap.add_argument("folder")
@@ -24,16 +38,12 @@ def main() -> int:
     if not folder.is_dir():
         raise SystemExit(f"Không thấy thư mục {folder}")
     out = folder.with_suffix(".zip")
-    files = sorted(p for p in folder.rglob("*") if p.is_file() and p.name not in SKIP)
-    with zipfile.ZipFile(out, "w", zipfile.ZIP_DEFLATED) as z:
-        for p in files:
-            info = zipfile.ZipInfo(f"{folder.name}/{p.relative_to(folder).as_posix()}", date_time=(2026, 1, 1, 0, 0, 0))
-            info.external_attr = 0o644 << 16
-            info.compress_type = zipfile.ZIP_DEFLATED
-            z.writestr(info, p.read_bytes())
-    digest = hashlib.sha256(out.read_bytes()).hexdigest()
+    data = build_zip(folder)
+    out.write_bytes(data)
+    digest = hashlib.sha256(data).hexdigest()
     folder.with_suffix(".sha256").write_text(f"{digest}  {out.name}\n", encoding="utf-8")
-    print(f"{out.name}: {len(files)} file, sha256 {digest}")
+    n = sum(1 for p in folder.rglob("*") if p.is_file() and p.name not in SKIP)
+    print(f"{out.name}: {n} file, sha256 {digest}")
     return 0
 
 
