@@ -67,6 +67,24 @@ def read_yolo(text: str) -> list[list[str]]:
     return [line.split() for line in text.splitlines() if line.strip()]
 
 
+def _iou(a: list[str], b: list[str]) -> float:
+    ax, ay, aw, ah = map(float, a[1:5])
+    bx, by, bw, bh = map(float, b[1:5])
+    ix = max(0.0, min(ax + aw / 2, bx + bw / 2) - max(ax - aw / 2, bx - bw / 2))
+    iy = max(0.0, min(ay + ah / 2, by + bh / 2) - max(ay - ah / 2, by - bh / 2))
+    inter = ix * iy
+    return inter / (aw * ah + bw * bh - inter + 1e-12)
+
+
+def dedupe(rows: list[list[str]]) -> list[list[str]]:
+    """Bỏ box trùng có sẵn trong COCO (cùng lớp, IoU > 0.7), để duplicate_box chỉ còn lỗi gài."""
+    kept: list[list[str]] = []
+    for row in rows:
+        if not any(k[0] == row[0] and _iou(k, row) > 0.7 for k in kept):
+            kept.append(row)
+    return kept
+
+
 def write_yolo(rows: list[list[str]]) -> str:
     return "".join(" ".join(row) + "\n" for row in rows)
 
@@ -114,7 +132,7 @@ class Builder:
                 "name": name, "stem": stem, "width": im["width"], "height": im["height"],
                 "image_id": new_idx + 1 if self.opaque else im["id"],
                 "jpg": (self.det_src / "images" / "train2017" / f"{stem}.jpg").read_bytes(),
-                "boxes": read_yolo((self.det_src / "labels" / "train2017" / f"{stem}.txt").read_text(encoding="utf-8")),
+                "boxes": dedupe(read_yolo((self.det_src / "labels" / "train2017" / f"{stem}.txt").read_text(encoding="utf-8"))),
                 "ann": anns[im["id"]],
                 "mask": pngutil.read_rgb(self.pan_src / "masks" / Path(anns[im["id"]]["file_name"]).name),
             })

@@ -110,7 +110,6 @@ Không. PASS chỉ nói lô v2 **đúng định dạng và nhất quán**: hash,
 | Chấm điểm (100 điểm) | [RUBRIC.md](RUBRIC.md) |
 | Sản phẩm phải nộp, tên repo | [SUBMISSION.md](SUBMISSION.md) |
 | Định dạng lô, các loại lỗi, format `errors.json` | [docs/DELIVERY.md](docs/DELIVERY.md) |
-| Đề ẩn cuối buổi (giảng viên) | [docs/HIDDEN_TEST.md](docs/HIDDEN_TEST.md) |
 | Các script | [scripts/README.md](scripts/README.md) |
 | Mẫu file phải điền | [templates/](templates/) |
 
