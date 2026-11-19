@@ -181,7 +181,7 @@ SWAP_MIN_IOU = 0.70
 SWAP_MIN_COVER = 0.85
 
 # missing_box: segment thing không có box nào cùng lớp
-MISSING_MIN_AREA_FRAC = 0.01   # segment phải chiếm >= 1% diện tích ảnh (vật "đáng kể")
+MISSING_MIN_AREA_FRAC = 0.005  # segment phải chiếm >= 0,5% diện tích ảnh (vật "đáng kể"); lô sạch vẫn 0 ứng viên ở 0,2%–1%
 MISSING_MAX_COVER = 0.30       # không box cùng lớp nào chứa quá 30% pixel của segment
 
 

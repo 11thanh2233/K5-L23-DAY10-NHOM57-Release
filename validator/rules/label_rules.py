@@ -15,7 +15,7 @@ Box = tuple[int, float, float, float, float]  # (class_id, xc, yc, w, h) chuẩn
 
 BOUNDS_TOL = 1e-3   # phần của cạnh ảnh; chỉ chừa sai số làm tròn của nhãn YOLO
 SIZE_TOL = 1.0      # px: hai box lặp gần như cùng w, h
-CENTER_TOL = 3.0    # px: box lặp chỉ lệch tâm 1–2 px
+CENTER_TOL = 6.0    # px: box lặp lệch tâm 1–2 px ở seed luyện tập; nới 6 px phòng đề ẩn lệch nhiều hơn. Cặp tự nhiên cùng kích thước gần nhất lệch ~12 px (đo trên clean, r6475, r777)
 
 
 # ---------------------------------------------------------------- tiện ích dùng chung
