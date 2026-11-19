@@ -31,6 +31,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "scripts"))
 
 from rules import label_rules as lr  # noqa: E402  (Người 2: luật nhãn detection)
 from rules import panoptic_rules as pr  # noqa: E402  (Người 2: luật panoptic)
+from rules import drift_merge as dm  # noqa: E402  (Người 4: bbox_drift, instance_merge)
 
 
 # ---------------------------------------------------------------- đọc lô
@@ -397,7 +398,7 @@ def cross_check(d: Delivery, skip: set[str]) -> list[dict]:
     """Ứng viên class_swap, category_swap, missing_box (Người 3), bbox_drift, instance_merge (Người 4).
     Mỗi ứng viên: {"image", "type", "reason", ...}. Không đưa vào errors.json; phải xem ảnh trước."""
     candidates, cache = cross_candidates_n3(d, skip)
-    # TODO (Người 4): candidates += drift_merge_candidates(cache)  # cache = {stem: (img, match)}
+    candidates += dm.drift_merge_candidates(cache)  # Người 4: rules/drift_merge.py
     return candidates
 
 
@@ -422,7 +423,10 @@ def validate(root: Path) -> tuple[list[dict], list[dict]]:
     errors += check_label_rules(d, missing)
     errors += check_panoptic_rules(d, missing)
     errors = one_fault_per_image(errors)
-    candidates = cross_check(d, missing)
+    # Mỗi ảnh mang nhiều nhất một lỗi (DELIVERY mục 2): ảnh đã có lỗi luật thì không sinh ứng viên gán nhãn.
+    # Ví dụ: ảnh duplicate_box có hai box cùng lớp chứa trọn một segment, trông giống instance_merge.
+    flagged = missing | {e["target"] for e in errors if e["type"] != "scene_leak"}
+    candidates = cross_check(d, flagged)
     return errors, candidates
 
 
