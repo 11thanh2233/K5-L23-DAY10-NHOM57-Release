@@ -2,4 +2,4 @@
 
 | # | Ai dùng | Công cụ | Prompt (tóm tắt) | AI sai ở đâu | Nhóm kiểm lại thế nào |
 |---|---|---|---|---|---|
-| 1 | <<>> | <<>> | <<>> | <<>> | <<>> |
+| 1 | Võ Duy Thanh (N1) | Claude Code (Claude Opus 5.5) | "Đọc GUIDE/DELIVERY/RULES, viết khung `validator/validate.py` đúng giao diện `<delivery> --out --candidates`, chỉ thư viện chuẩn; làm `missing_image`, `wrong_hash`, `scene_leak`, `guideline_mismatch`; để hàm trống cho phần luật nhãn và đối chiếu của người khác." | Chưa thấy sai ở 4 luật này. Các chỗ dễ sai đã soát: hash phải tính trên bytes (`rb`), không kiểm định dạng chuỗi; `guideline_mismatch` so với guideline của **job** trong `jobs.csv`, không so giữa các ảnh; `scene_leak` có target là `scene_id`; ảnh thiếu file thì không xét luật khác. | Chạy trên seed 6475, seed phụ 777 (`inject_release.py`) và lô sạch `runs/clean`: lô sạch 0 lỗi. So với các lỗi luật mức file mà `check_handover.py` tự tính được (không dùng đáp án): cả 4 loại khớp hết trên 2 seed; phần còn thiếu chỉ là `bbox_out_of_bounds`, `invalid_class` (phần Người 2). `score_findings.py`: lỗi luật ≈ 0,6 trên cả 2 seed khi chưa có luật của Người 2. |
