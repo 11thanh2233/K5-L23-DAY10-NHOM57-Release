@@ -13,8 +13,9 @@
 | 2 | Đinh Đức Hiếu | 2A202603327 | hieudd04268 | Lỗi luật nhãn: `invalid_class`, `bbox_out_of_bounds`, `duplicate_box` (detection); `invalid_category_id`, `thing_overlap` (panoptic); thử trên seed phụ và lô sạch |
 | 3 | Nguyễn Hoài Nam | 2A202603186 | NamhocFPT | Đối chiếu detection ↔ panoptic (ghép theo tên lớp, IoU, pixel mask); ứng viên `class_swap`, `category_swap`, `missing_box` |
 | 4 | Nguyễn Minh Hiếu | 2A202603169 | harutoryuoma | Ứng viên `bbox_drift`, `instance_merge`; đo ứng viên trên lô sạch để chọn ngưỡng; công cụ xem ảnh (vẽ box + viền segment) |
-| 5 | <<Người 5>> | <<>> | <<>> | Pha 3–4: lineage (HOLD v1, release v2), lô v2 (`rework_queue`, `manifest`, `label_summary`, `truyvet`, `README.txt`), `pack_release`, `check_handover` |
-| 6 | <<Người 6>> | <<>> | <<>> | Pha 5–6: `trace.json`, `security.md`; viết `REPORT.md` và `prompts.md` |
+| 5 | Bùi Anh Dũng | 2A202603033 | Bui1234 | Pha 3–4: lineage (HOLD v1, release v2), lô v2 (`rework_queue`, `manifest`, `label_summary`, `truyvet`, `README.txt`), `pack_release`, `check_handover` |
+| 6 | Trần Quang Nam | 2A202603118 | trannam229 | Pha 5–6: `trace.json`, `security.md`; viết `REPORT.md` và `prompts.md` |
+
 
 ## Việc chung
 
