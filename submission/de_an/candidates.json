@@ -1,0 +1,246 @@
+{
+ "candidates": [
+  {
+   "image": "img_0055",
+   "type": "class_swap|category_swap",
+   "reason": "box #0 detection ghi 'dog', segment 15018643 panoptic ghi 'sink', trùng vị trí (IoU 1.0, 100% pixel trong box). Mở ảnh: vật thật là gì? detection sai -> class_swap, panoptic sai -> category_swap",
+   "box_px": [
+    303,
+    490,
+    406,
+    526
+   ],
+   "seg_id": 15018643,
+   "det_class": "dog",
+   "pan_class": "sink"
+  },
+  {
+   "image": "img_0070",
+   "type": "missing_box",
+   "reason": "segment 12264218 'skateboard' chiếm 1976 px (0.7% ảnh), không box 'skateboard' nào phủ (cao nhất 0%). Mở ảnh: vật có rõ không, có bị che/cắt không?",
+   "seg_bbox_px": [
+    243,
+    334,
+    347,
+    386
+   ],
+   "seg_id": 12264218,
+   "pan_class": "skateboard"
+  },
+  {
+   "image": "img_0170",
+   "type": "class_swap|category_swap",
+   "reason": "box #0 detection ghi 'zebra', segment 5483161 panoptic ghi 'tennis racket', trùng vị trí (IoU 0.998, 100% pixel trong box). Mở ảnh: vật thật là gì? detection sai -> class_swap, panoptic sai -> category_swap",
+   "box_px": [
+    88,
+    29,
+    606,
+    478
+   ],
+   "seg_id": 5483161,
+   "det_class": "zebra",
+   "pan_class": "tennis racket"
+  },
+  {
+   "image": "img_0175",
+   "type": "class_swap|category_swap",
+   "reason": "box #4 detection ghi 'car', segment 12750172 panoptic ghi 'bus', trùng vị trí (IoU 1.0, 100% pixel trong box). Mở ảnh: vật thật là gì? detection sai -> class_swap, panoptic sai -> category_swap",
+   "box_px": [
+    440,
+    69,
+    639,
+    185
+   ],
+   "seg_id": 12750172,
+   "det_class": "car",
+   "pan_class": "bus"
+  },
+  {
+   "image": "img_0249",
+   "type": "class_swap|category_swap",
+   "reason": "box #7 detection ghi 'bench', segment 6006964 panoptic ghi 'chair', trùng vị trí (IoU 1.0, 100% pixel trong box). Mở ảnh: vật thật là gì? detection sai -> class_swap, panoptic sai -> category_swap",
+   "box_px": [
+    237,
+    222,
+    286,
+    305
+   ],
+   "seg_id": 6006964,
+   "det_class": "bench",
+   "pan_class": "chair"
+  },
+  {
+   "image": "img_0002",
+   "type": "instance_merge",
+   "reason": "segment 3188092 'couch' (59322 px) trải trên 2 box 'couch': box #2 chứa 50%, box #1 chứa 49%. Box thừa không có segment riêng. Mở ảnh: có phải hai vật riêng bị gộp thành một segment?",
+   "seg_id": 3188092,
+   "seg_bbox_px": [
+    0,
+    204,
+    637,
+    421
+   ],
+   "box_px": [
+    [
+     0,
+     207,
+     211,
+     421
+    ],
+    [
+     422,
+     204,
+     637,
+     420
+    ]
+   ],
+   "pan_class": "couch"
+  },
+  {
+   "image": "img_0013",
+   "type": "instance_merge",
+   "reason": "segment 2887369 'orange' (54335 px) trải trên 2 box 'orange': box #3 chứa 100%, box #4 chứa 27%. Box thừa không có segment riêng. Mở ảnh: có phải hai vật riêng bị gộp thành một segment?",
+   "seg_id": 2887369,
+   "seg_bbox_px": [
+    0,
+    0,
+    306,
+    236
+   ],
+   "box_px": [
+    [
+     0,
+     0,
+     314,
+     236
+    ],
+    [
+     0,
+     115,
+     229,
+     479
+    ]
+   ],
+   "pan_class": "orange"
+  },
+  {
+   "image": "img_0027",
+   "type": "instance_merge",
+   "reason": "segment 223376 'truck' (4657 px) trải trên 2 box 'truck': box #1 chứa 100%, box #17 chứa 50%. Box thừa không có segment riêng. Mở ảnh: có phải hai vật riêng bị gộp thành một segment?",
+   "seg_id": 223376,
+   "seg_bbox_px": [
+    220,
+    228,
+    339,
+    283
+   ],
+   "box_px": [
+    [
+     220,
+     228,
+     339,
+     283
+    ],
+    [
+     0,
+     0,
+     284,
+     400
+    ]
+   ],
+   "pan_class": "truck"
+  },
+  {
+   "image": "img_0158",
+   "type": "bbox_drift",
+   "reason": "segment 12882962 'bear' bbox [394, 98, 446, 162] tràn 12 px ra ngoài box [406, 105, 458, 171] (23% cạnh ngắn; tự nhiên <= 2 px); box chứa 79% pixel của segment. Mở ảnh: box có lệch khỏi vật không?",
+   "seg_id": 12882962,
+   "seg_bbox_px": [
+    394,
+    98,
+    446,
+    162
+   ],
+   "box_px": [
+    406,
+    105,
+    458,
+    171
+   ],
+   "pan_class": "bear"
+  },
+  {
+   "image": "img_0204",
+   "type": "instance_merge",
+   "reason": "segment 6817581 'cup' (311 px) trải trên 2 box 'cup': box #24 chứa 100%, box #23 chứa 41%. Box thừa không có segment riêng. Mở ảnh: có phải hai vật riêng bị gộp thành một segment?",
+   "seg_id": 6817581,
+   "seg_bbox_px": [
+    151,
+    155,
+    166,
+    182
+   ],
+   "box_px": [
+    [
+     151,
+     155,
+     167,
+     182
+    ],
+    [
+     137,
+     139,
+     160,
+     172
+    ]
+   ],
+   "pan_class": "cup"
+  },
+  {
+   "image": "img_0237",
+   "type": "bbox_drift",
+   "reason": "segment 999782 'orange' bbox [91, 195, 222, 275] tràn 15 px ra ngoài box [88, 210, 221, 290] (18% cạnh ngắn; tự nhiên <= 2 px); box chứa 88% pixel của segment. Mở ảnh: box có lệch khỏi vật không?",
+   "seg_id": 999782,
+   "seg_bbox_px": [
+    91,
+    195,
+    222,
+    275
+   ],
+   "box_px": [
+    88,
+    210,
+    221,
+    290
+   ],
+   "pan_class": "orange"
+  },
+  {
+   "image": "img_0247",
+   "type": "instance_merge",
+   "reason": "segment 12703920 'tv' (8614 px) trải trên 2 box 'tv': box #4 chứa 50%, box #3 chứa 49%. Box thừa không có segment riêng. Mở ảnh: có phải hai vật riêng bị gộp thành một segment?",
+   "seg_id": 12703920,
+   "seg_bbox_px": [
+    57,
+    108,
+    397,
+    183
+   ],
+   "box_px": [
+    [
+     325,
+     108,
+     397,
+     179
+    ],
+    [
+     57,
+     124,
+     130,
+     183
+    ]
+   ],
+   "pan_class": "tv"
+  }
+ ]
+}

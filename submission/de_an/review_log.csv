@@ -1,3 +1,13 @@
 image,type,verdict,note
 img_0170,category_swap,confirmed,Panoptic gán nhầm nhãn tennis racket cho ngựa vằn; nhãn zebra trong detection là chính xác.
 img_0055,class_swap,confirmed,Detection gán nhầm nhãn dog; bounding box thực tế bao quanh bồn rửa (sink).
+img_0175,class_swap,confirmed,"Xe buýt thành phố dài, nhiều cửa kính, chạy phía sau người đi xe máy; detection ghi car, panoptic ghi bus là đúng"
+img_0249,class_swap,confirmed,"Ghế tựa gỗ đơn một chỗ ngồi, có lưng tựa, đặt cạnh quầy bar; detection ghi bench, panoptic ghi chair là đúng"
+img_0070,missing_box,confirmed,"Ván trượt dưới chân người đang nhảy, thấy rõ mặt ván và bốn bánh xe; detection chỉ có box person, không có box skateboard"
+img_0002,instance_merge,confirmed,"Hai băng ghế xe buýt tách rời ở hai bên lối đi, mỗi cái có box couch riêng nhưng panoptic gộp thành một segment"
+img_0247,instance_merge,confirmed,"Hai màn hình tv treo cao cách xa nhau ở góc trái và góc phải; detection có hai box, panoptic gộp chung một segment tv"
+img_0158,bbox_drift,confirmed,"Gấu đen đứng ở bìa rừng; box lệch sang phải và xuống khoảng 12 px, phần trái thân gấu nằm ngoài box, đáy box trùm xuống đất"
+img_0237,bbox_drift,confirmed,"Lát chanh xanh trong khay cạnh bướm; box orange lệch xuống khoảng 15 px, mép trên lát chanh ra ngoài box, đáy box trùm lên vỏ chuối"
+img_0013,instance_merge,rejected,"Segment orange chỉ phủ đúng quả màu xanh phía trên; quả cam bên dưới không bị tô vào segment, box của nó chồng lên vì hai quả xếp sát nhau: lệch tự nhiên"
+img_0027,instance_merge,rejected,"Segment truck chỉ phủ chiếc xe tải công trình ở xa; box truck lớn bên trái là xe người chụp đang ngồi, chồng lên do góc chụp, không phải gộp hai vật"
+img_0204,instance_merge,rejected,"Segment cup chỉ phủ chiếc cốc nhỏ màu trắng; chai nước xanh dương đứng sát bên có box riêng chồng lên một phần, không bị gộp vào segment"

@@ -1,6 +1,14 @@
 {
  "errors": [
   {
+   "type": "bbox_drift",
+   "target": "img_0158"
+  },
+  {
+   "type": "bbox_drift",
+   "target": "img_0237"
+  },
+  {
    "type": "bbox_out_of_bounds",
    "target": "img_0189"
   },
@@ -17,6 +25,14 @@
    "target": "img_0055"
   },
   {
+   "type": "class_swap",
+   "target": "img_0175"
+  },
+  {
+   "type": "class_swap",
+   "target": "img_0249"
+  },
+  {
    "type": "guideline_mismatch",
    "target": "img_0035"
   },
@@ -25,8 +41,20 @@
    "target": "img_0076"
   },
   {
+   "type": "instance_merge",
+   "target": "img_0002"
+  },
+  {
+   "type": "instance_merge",
+   "target": "img_0247"
+  },
+  {
    "type": "invalid_class",
    "target": "img_0197"
+  },
+  {
+   "type": "missing_box",
+   "target": "img_0070"
   },
   {
    "type": "missing_image",
