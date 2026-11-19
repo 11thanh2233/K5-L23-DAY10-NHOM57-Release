@@ -23,6 +23,7 @@ import csv
 import hashlib
 import json
 import sys
+from array import array
 from pathlib import Path
 
 # pngutil.py (thư viện chuẩn) nằm ở scripts/ cạnh validator/
@@ -166,10 +167,238 @@ def check_panoptic_rules(d: Delivery, skip: set[str]) -> list[dict]:
 
 # ---------------------------------------------------------------- Người 3, 4: đối chiếu det <-> panoptic
 
+# ---- Người 3 (Nguyễn Hoài Nam): ghép box <-> segment theo tên lớp + pixel mask;
+#      ứng viên class_swap/category_swap, missing_box. Người 4 dùng lại match() cho bbox_drift, instance_merge.
+
+# ---------------------------------------------------------------- ngưỡng (chỉnh sau khi đo lô sạch)
+
+# Ghép cùng lớp: một cặp được coi là cùng một vật khi
+MATCH_MIN_IOU = 0.30      # IoU giữa box detection và bbox của segment
+MATCH_MIN_COVER = 0.50    # tỉ lệ pixel của segment nằm trong box
+
+# Lệch lớp (class_swap / category_swap): box và segment KHÁC tên lớp nhưng trùng vị trí rất chặt
+SWAP_MIN_IOU = 0.70
+SWAP_MIN_COVER = 0.85
+
+# missing_box: segment thing không có box nào cùng lớp
+MISSING_MIN_AREA_FRAC = 0.01   # segment phải chiếm >= 1% diện tích ảnh (vật "đáng kể")
+MISSING_MAX_COVER = 0.30       # không box cùng lớp nào chứa quá 30% pixel của segment
+
+
+# ---------------------------------------------------------------- 1. box YOLO -> pixel
+
+def box_to_px(xc: float, yc: float, w: float, h: float, W: int, H: int) -> tuple[int, int, int, int]:
+    """(x1, y1, x2, y2) pixel, x2/y2 không tính (kiểu slice), đã cắt trong ảnh."""
+    x1 = round((xc - w / 2) * W)
+    y1 = round((yc - h / 2) * H)
+    x2 = round((xc + w / 2) * W)
+    y2 = round((yc + h / 2) * H)
+    return max(0, x1), max(0, y1), min(W, x2), min(H, y2)
+
+
+def iou(a: tuple[int, int, int, int], b: tuple[int, int, int, int]) -> float:
+    ix = max(0, min(a[2], b[2]) - max(a[0], b[0]))
+    iy = max(0, min(a[3], b[3]) - max(a[1], b[1]))
+    inter = ix * iy
+    union = (a[2] - a[0]) * (a[3] - a[1]) + (b[2] - b[0]) * (b[3] - b[1]) - inter
+    return inter / union if union > 0 else 0.0
+
+
+# ---------------------------------------------------------------- 2. đọc mask
+
+def read_segment_ids(mask_path: Path) -> tuple[int, int, array]:
+    """Trả về (W, H, ids) với ids[y*W + x] = id segment của pixel đó.
+
+    Ghép R, G, B thành số 32-bit bằng slice của bytearray (chạy ở tốc độ C),
+    không lặp từng pixel trong Python."""
+    import pngutil
+
+    W, H, rgb = pngutil.read_rgb(mask_path)
+    buf = bytearray(W * H * 4)
+    buf[0::4] = rgb[0::3]
+    buf[1::4] = rgb[1::3]
+    buf[2::4] = rgb[2::3]
+    ids = array("I")
+    if ids.itemsize != 4:  # máy hiếm gặp: 'I' không phải 4 byte
+        ids = array("L")
+    ids.frombytes(bytes(buf))
+    if sys.byteorder == "big":
+        ids.byteswap()
+    return W, H, ids
+
+
+def count_in_box(ids: array, W: int, box: tuple[int, int, int, int], seg_id: int) -> int:
+    """Số pixel của seg_id nằm trong box."""
+    x1, y1, x2, y2 = box
+    if x2 <= x1 or y2 <= y1:
+        return 0
+    n = 0
+    for y in range(y1, y2):
+        n += ids[y * W + x1 : y * W + x2].count(seg_id)
+    return n
+
+
+# ---------------------------------------------------------------- 3. ghép
+
+def load_image(d, stem: str):
+    """Gom dữ liệu một ảnh. Trả None nếu thiếu nhãn, mask hoặc annotation."""
+    ann = d.pan_anns.get(stem)
+    size = d.size(stem)
+    if ann is None or size is None:
+        return None
+    mask_path = d.path(stem, "mask")
+    if not mask_path.is_file():
+        return None
+    W, H, ids = read_segment_ids(mask_path)
+
+    boxes = []  # (idx, tên lớp, box pixel)
+    for i, (cid, xc, yc, w, h) in enumerate(d.read_boxes(stem)):
+        name = d.classes.get(cid)
+        if name is None:  # invalid_class: luật của Người 2 lo
+            continue
+        b = box_to_px(xc, yc, w, h, W, H)
+        if b[2] > b[0] and b[3] > b[1]:
+            boxes.append((i, name, b))
+
+    segs = {}  # id -> {name, bbox, pixels}
+    for s in ann.get("segments_info", []):
+        cat = d.categories.get(s["category_id"])
+        if cat is None or not cat.get("isthing") or s.get("iscrowd"):
+            continue  # stuff, crowd, hoặc invalid_category_id: không ghép
+        x, y, w, h = s["bbox"]
+        pixels = ids.count(s["id"])  # đếm thật, không tin "area" (có thể là thing_overlap)
+        if pixels == 0:
+            continue
+        segs[s["id"]] = {
+            "name": cat["name"],
+            "bbox": (int(x), int(y), int(round(x + w)), int(round(y + h))),
+            "pixels": pixels,
+        }
+    return {"W": W, "H": H, "ids": ids, "boxes": boxes, "segs": segs}
+
+
+def match(img: dict) -> dict:
+    """Ghép một-một box <-> segment.
+
+    Lượt 1: cùng tên lớp, điểm = IoU * cover, ngưỡng lỏng (box hơi lệch vẫn ghép được để Người 4 xét drift).
+    Lượt 2: box và segment còn lẻ, KHÁC tên lớp, trùng vị trí rất chặt -> cặp lệch lớp.
+
+    cover = pixel của segment nằm trong box / tổng pixel segment
+    fill  = pixel của segment nằm trong box / diện tích box
+    """
+    ids, W = img["ids"], img["W"]
+    inside: dict[tuple[int, int], int] = {}
+    stats = []  # (score, box_idx, seg_id, iou, cover, fill, same_class)
+    for bi, bname, b in img["boxes"]:
+        area_b = (b[2] - b[0]) * (b[3] - b[1])
+        for sid, s in img["segs"].items():
+            o = iou(b, s["bbox"])
+            if o == 0:
+                continue
+            n = count_in_box(ids, W, b, sid)
+            inside[(bi, sid)] = n
+            cover = n / s["pixels"]
+            fill = n / area_b
+            stats.append((o * cover, bi, sid, o, cover, fill, bname == s["name"]))
+
+    box_by_idx = {bi: (bname, b) for bi, bname, b in img["boxes"]}
+    used_b, used_s, pairs, swaps = set(), set(), [], []
+
+    for score, bi, sid, o, cover, fill, same in sorted(stats, reverse=True):
+        if not same or bi in used_b or sid in used_s:
+            continue
+        if o >= MATCH_MIN_IOU and cover >= MATCH_MIN_COVER:
+            used_b.add(bi)
+            used_s.add(sid)
+            pairs.append({"box_idx": bi, "seg_id": sid, "cls": box_by_idx[bi][0],
+                          "iou": round(o, 3), "cover": round(cover, 3), "fill": round(fill, 3)})
+
+    for score, bi, sid, o, cover, fill, same in sorted(stats, reverse=True):
+        if same or bi in used_b or sid in used_s:
+            continue
+        if o >= SWAP_MIN_IOU and cover >= SWAP_MIN_COVER:
+            used_b.add(bi)
+            used_s.add(sid)
+            swaps.append({"box_idx": bi, "seg_id": sid, "det_class": box_by_idx[bi][0],
+                          "pan_class": img["segs"][sid]["name"], "iou": round(o, 3), "cover": round(cover, 3)})
+
+    return {
+        "pairs": pairs,
+        "swaps": swaps,
+        "unmatched_boxes": [bi for bi, _, _ in img["boxes"] if bi not in used_b],
+        "unmatched_segs": [sid for sid in img["segs"] if sid not in used_s],
+        "inside": inside,
+    }
+
+
+# ---------------------------------------------------------------- 4. ứng viên
+
+def mismatch_candidates(stem: str, img: dict, m: dict) -> list[dict]:
+    out = []
+    for p in m["swaps"]:
+        _, _, b = next(x for x in img["boxes"] if x[0] == p["box_idx"])
+        out.append({
+            "image": stem,
+            "type": "class_swap|category_swap",
+            "reason": f"box #{p['box_idx']} detection ghi '{p['det_class']}', segment {p['seg_id']} panoptic ghi "
+                      f"'{p['pan_class']}', trùng vị trí (IoU {p['iou']}, {int(p['cover'] * 100)}% pixel trong box). "
+                      f"Mở ảnh: vật thật là gì? detection sai -> class_swap, panoptic sai -> category_swap",
+            "box_px": list(b),
+            "seg_id": p["seg_id"],
+            "det_class": p["det_class"],
+            "pan_class": p["pan_class"],
+        })
+    return out
+
+
+def missing_box_candidates(stem: str, img: dict, m: dict) -> list[dict]:
+    out = []
+    min_px = MISSING_MIN_AREA_FRAC * img["W"] * img["H"]
+    for sid in m["unmatched_segs"]:
+        s = img["segs"][sid]
+        if s["pixels"] < min_px:
+            continue
+        best = 0.0
+        for bi, bname, _ in img["boxes"]:
+            if bname == s["name"]:
+                best = max(best, m["inside"].get((bi, sid), 0) / s["pixels"])
+        if best > MISSING_MAX_COVER:
+            continue  # có box cùng lớp phủ một phần: nghiêng về bbox_drift (Người 4), không phải thiếu box
+        out.append({
+            "image": stem,
+            "type": "missing_box",
+            "reason": f"segment {sid} '{s['name']}' chiếm {s['pixels']} px "
+                      f"({100 * s['pixels'] / (img['W'] * img['H']):.1f}% ảnh), không box '{s['name']}' nào phủ "
+                      f"(cao nhất {int(best * 100)}%). Mở ảnh: vật có rõ không, có bị che/cắt không?",
+            "seg_bbox_px": list(s["bbox"]),
+            "seg_id": sid,
+            "pan_class": s["name"],
+        })
+    return out
+
+
+def cross_candidates_n3(d, skip: set[str]) -> tuple[list[dict], dict]:
+    """Chạy cho cả lô. Trả về (ứng viên của Người 3, {stem: (img, match)} để Người 4 dùng lại)."""
+    cands, cache = [], {}
+    for stem in sorted(d.items):
+        if stem in skip:
+            continue
+        img = load_image(d, stem)
+        if img is None:
+            continue
+        m = match(img)
+        cache[stem] = (img, m)
+        cands += mismatch_candidates(stem, img, m)
+        cands += missing_box_candidates(stem, img, m)
+    return cands, cache
+
+
 def cross_check(d: Delivery, skip: set[str]) -> list[dict]:
-    """TODO (Người 3, 4): ứng viên class_swap, category_swap, missing_box, bbox_drift, instance_merge.
+    """Ứng viên class_swap, category_swap, missing_box (Người 3), bbox_drift, instance_merge (Người 4).
     Mỗi ứng viên: {"image", "type", "reason", ...}. Không đưa vào errors.json; phải xem ảnh trước."""
-    return []
+    candidates, cache = cross_candidates_n3(d, skip)
+    # TODO (Người 4): candidates += drift_merge_candidates(cache)  # cache = {stem: (img, match)}
+    return candidates
 
 
 # ---------------------------------------------------------------- main
