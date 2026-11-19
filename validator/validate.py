@@ -28,6 +28,9 @@ from pathlib import Path
 # pngutil.py (thư viện chuẩn) nằm ở scripts/ cạnh validator/
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "scripts"))
 
+from rules import label_rules as lr  # noqa: E402  (Người 2: luật nhãn detection)
+from rules import panoptic_rules as pr  # noqa: E402  (Người 2: luật panoptic)
+
 
 # ---------------------------------------------------------------- đọc lô
 
@@ -126,15 +129,39 @@ def check_meta_rules(d: Delivery) -> list[dict]:
 # ---------------------------------------------------------------- Người 2: luật nhãn detection + panoptic
 
 def check_label_rules(d: Delivery, skip: set[str]) -> list[dict]:
-    """TODO (Người 2): invalid_class, bbox_out_of_bounds, duplicate_box.
-    Gợi ý: d.read_boxes(stem), d.size(stem); duplicate_box = cùng lớp, cùng kích thước, lệch tâm 1–2 px."""
-    return []
+    """(Người 2) invalid_class, bbox_out_of_bounds, duplicate_box. Từng luật nằm ở rules/label_rules.py."""
+    class_ids = set(d.classes)
+    errors = []
+    for stem in sorted(d.items):
+        if stem in skip:
+            continue
+        boxes = d.read_boxes(stem)
+        if lr.has_invalid_class(boxes, class_ids):
+            errors.append({"type": "invalid_class", "target": stem})
+        elif lr.has_out_of_bounds(boxes):
+            errors.append({"type": "bbox_out_of_bounds", "target": stem})
+        else:
+            size = d.size(stem)
+            if size and lr.has_duplicate_box(boxes, *size):
+                errors.append({"type": "duplicate_box", "target": stem})
+    return errors
 
 
 def check_panoptic_rules(d: Delivery, skip: set[str]) -> list[dict]:
-    """TODO (Người 2): invalid_category_id, thing_overlap.
-    Gợi ý: d.categories, d.pan_anns[stem]["segments_info"]; đọc mask bằng pngutil (id = R + G*256 + B*256^2)."""
-    return []
+    """(Người 2) invalid_category_id, thing_overlap. Từng luật nằm ở rules/panoptic_rules.py."""
+    category_ids = set(d.categories)
+    errors = []
+    for stem in sorted(d.items):
+        ann = d.pan_anns.get(stem)
+        if stem in skip or ann is None:
+            continue
+        segments = ann["segments_info"]
+        mask = d.path(stem, "mask")
+        if pr.has_invalid_category(segments, category_ids):
+            errors.append({"type": "invalid_category_id", "target": stem})
+        elif mask.is_file() and pr.has_thing_overlap(segments, mask):
+            errors.append({"type": "thing_overlap", "target": stem})
+    return errors
 
 
 # ---------------------------------------------------------------- Người 3, 4: đối chiếu det <-> panoptic
