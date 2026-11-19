@@ -64,7 +64,7 @@ flowchart LR
 4. Làm theo **[GUIDE.md](GUIDE.md)** từ **P1**. Đọc trước định dạng lô ở [docs/DELIVERY.md](docs/DELIVERY.md).
 5. Trước khi nộp: `python scripts/check_handover.py --run runs/r<seed>` không còn FAIL.
 
-> **Khi nộp:** đổi dòng tiêu đề này thành `# Day 10 Lab — Nhóm <XX>`. Xem [SUBMISSION.md](SUBMISSION.md).
+> **Khi nộp:** đổi dòng tiêu đề này theo tên nhóm trưởng: `# Day 10 Lab — VoDuyThanh - ...` (đã đổi). Xem [SUBMISSION.md](SUBMISSION.md).
 
 <details>
 <summary><b>Vì sao không có nhãn gốc để so?</b></summary>
@@ -102,16 +102,16 @@ Không. PASS chỉ nói lô v2 **đúng định dạng và nhất quán**: hash,
 
 ## Tài liệu
 
-| Bạn cần | Xem |
+| Bạn cần                                          | Xem |
 |---|---|
-| Các pha và lệnh chạy | [GUIDE.md](GUIDE.md) |
-| Mốc tiến độ 4 giờ | [CHECKPOINTS.md](CHECKPOINTS.md) |
-| Quy tắc làm bài, dùng AI | [RULES.md](RULES.md) |
-| Chấm điểm (100 điểm) | [RUBRIC.md](RUBRIC.md) |
-| Sản phẩm phải nộp, tên repo | [SUBMISSION.md](SUBMISSION.md) |
+| Các pha và lệnh chạy                             | [GUIDE.md](GUIDE.md) |
+| Mốc tiến độ 4 giờ                                | [CHECKPOINTS.md](CHECKPOINTS.md) |
+| Quy tắc làm bài                                  | [RULES.md](RULES.md) |
+| Chấm điểm (100 điểm)                             | [RUBRIC.md](RUBRIC.md) |
+| Sản phẩm phải nộp, tên repo                      | [SUBMISSION.md](SUBMISSION.md) |
 | Định dạng lô, các loại lỗi, format `errors.json` | [docs/DELIVERY.md](docs/DELIVERY.md) |
-| Các script | [scripts/README.md](scripts/README.md) |
-| Mẫu file phải điền | [templates/](templates/) |
+| Các script                                       | [scripts/README.md](scripts/README.md) |
+| Mẫu file phải điền                               | [templates/](templates/) |
 
 ## Bạn học được gì
 
