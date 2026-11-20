@@ -1,2 +1,2 @@
 image,type,verdict,note
-000000022589,,,
+000000022589,class_swap,confirmed,"Ảnh cho thấy một con cừu với bộ lông dày xoăn và khuôn mặt đặc trưng của cừu; panoptic ghi sheep đúng, còn detection ghi horse sai."
