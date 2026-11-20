@@ -1,2 +1,2 @@
-image,type,verdict,note
-000000007784,bbox_drift,,
+﻿image,type,verdict,note
+000000007784,bbox_drift,confirmed,"Xác nhận bbox_drift: khung detection không bao phủ toàn bộ chiếc diều, lệch so với biên panoptic; cần chỉnh lại bounding box."
