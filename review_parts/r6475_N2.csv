@@ -1,3 +1,3 @@
 image,type,verdict,note
-000000000785,missing_box,,
-000000005001,bbox_drift,,
+000000000785,missing_box,confirmed,"Một người thấy rõ trong ảnh, vùng xanh phủ đúng người đó; chỉ có box vàng bao ván trượt tuyết, không có box person nào bao người"
+000000005001,bbox_drift,confirmed,"Vùng xanh phủ đúng một người; box đỏ person bị lệch khỏi người, cắt mất một phần thân, không phải hai người bị gộp"
