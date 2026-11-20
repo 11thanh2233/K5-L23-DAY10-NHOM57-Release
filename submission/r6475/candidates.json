@@ -1,0 +1,148 @@
+{
+ "candidates": [
+  {
+   "image": "000000000785",
+   "type": "missing_box",
+   "reason": "segment 3287629 'person' chiếm 27486 px (10.1% ảnh), không box 'person' nào phủ (cao nhất 0%). Mở ảnh: vật có rõ không, có bị che/cắt không?",
+   "seg_bbox_px": [
+    281,
+    45,
+    497,
+    391
+   ],
+   "seg_id": 3287629,
+   "pan_class": "person"
+  },
+  {
+   "image": "000000017436",
+   "type": "class_swap|category_swap",
+   "reason": "box #1 detection ghi 'bench', segment 4017234 panoptic ghi 'chair', trùng vị trí (IoU 0.99, 100% pixel trong box). Mở ảnh: vật thật là gì? detection sai -> class_swap, panoptic sai -> category_swap",
+   "box_px": [
+    22,
+    534,
+    178,
+    631
+   ],
+   "seg_id": 4017234,
+   "det_class": "bench",
+   "pan_class": "chair"
+  },
+  {
+   "image": "000000022589",
+   "type": "class_swap|category_swap",
+   "reason": "box #0 detection ghi 'horse', segment 6189719 panoptic ghi 'sheep', trùng vị trí (IoU 0.994, 100% pixel trong box). Mở ảnh: vật thật là gì? detection sai -> class_swap, panoptic sai -> category_swap",
+   "box_px": [
+    182,
+    214,
+    363,
+    343
+   ],
+   "seg_id": 6189719,
+   "det_class": "horse",
+   "pan_class": "sheep"
+  },
+  {
+   "image": "000000005001",
+   "type": "bbox_drift",
+   "reason": "segment 5919587 'person' bbox [209, 61, 298, 209] tràn 13 px ra ngoài box [195, 47, 285, 196] (14% cạnh ngắn; tự nhiên <= 2 px); box chứa 93% pixel của segment. Mở ảnh: box có lệch khỏi vật không?",
+   "seg_id": 5919587,
+   "seg_bbox_px": [
+    209,
+    61,
+    298,
+    209
+   ],
+   "box_px": [
+    195,
+    47,
+    285,
+    196
+   ],
+   "pan_class": "person"
+  },
+  {
+   "image": "000000007784",
+   "type": "bbox_drift",
+   "reason": "segment 8881844 'kite' bbox [94, 86, 334, 306] tràn 43 px ra ngoài box [51, 100, 291, 320] (19% cạnh ngắn; tự nhiên <= 2 px); box chứa 80% pixel của segment. Mở ảnh: box có lệch khỏi vật không?",
+   "seg_id": 8881844,
+   "seg_bbox_px": [
+    94,
+    86,
+    334,
+    306
+   ],
+   "box_px": [
+    51,
+    100,
+    291,
+    320
+   ],
+   "pan_class": "kite"
+  },
+  {
+   "image": "000000007795",
+   "type": "instance_merge",
+   "reason": "segment 7435899 'bed' (89363 px) trải trên 2 box 'bed': box #0 chứa 98%, box #1 chứa 32%. Box thừa không có segment riêng. Mở ảnh: có phải hai vật riêng bị gộp thành một segment?",
+   "seg_id": 7435899,
+   "seg_bbox_px": [
+    1,
+    190,
+    483,
+    418
+   ],
+   "box_px": [
+    [
+     1,
+     191,
+     455,
+     418
+    ],
+    [
+     164,
+     190,
+     483,
+     311
+    ]
+   ],
+   "pan_class": "bed"
+  },
+  {
+   "image": "000000018737",
+   "type": "bbox_drift",
+   "reason": "segment 5919584 'motorcycle' bbox [254, 159, 592, 408] tràn 45 px ra ngoài box [299, 152, 640, 403] (18% cạnh ngắn; tự nhiên <= 2 px); box chứa 92% pixel của segment. Mở ảnh: box có lệch khỏi vật không?",
+   "seg_id": 5919584,
+   "seg_bbox_px": [
+    254,
+    159,
+    592,
+    408
+   ],
+   "box_px": [
+    299,
+    152,
+    640,
+    403
+   ],
+   "pan_class": "motorcycle"
+  },
+  {
+   "image": "000000021903",
+   "type": "bbox_drift",
+   "reason": "segment 10659243 'person' bbox [334, 224, 640, 475] tràn 89 px ra ngoài box [334, 224, 551, 475] (35% cạnh ngắn; tự nhiên <= 2 px); box chứa 92% pixel của segment. Mở ảnh: box có lệch khỏi vật không?",
+   "seg_id": 10659243,
+   "seg_bbox_px": [
+    334,
+    224,
+    640,
+    475
+   ],
+   "box_px": [
+    334,
+    224,
+    551,
+    475
+   ],
+   "pan_class": "person"
+  }
+ ]
+}

@@ -1,0 +1,10 @@
+image,type,verdict,note
+000000007795,instance_merge,confirmed,"Hai chiếc giường riêng: giường lớn phía trước và giường đôi phía sau sát cửa sổ, mỗi chiếc có box bed riêng nhưng panoptic tô chung một segment bed phủ cả hai"
+000000021903,bbox_drift,rejected,"Box person ôm vừa khít người đàn ông đang đưa tay cho voi ăn, không lệch; phần tràn 89 px là do segment phủ sang người khác ở mép phải ảnh"
+000000021903,instance_merge,confirmed,Segment person gộp người đàn ông cho voi ăn với người thứ hai bị cắt ở mép phải ảnh; người kia có box riêng nhưng không có segment riêng
+000000000785,missing_box,confirmed,"Một người thấy rõ trong ảnh, vùng xanh phủ đúng người đó; chỉ có box vàng bao ván trượt tuyết, không có box person nào bao người"
+000000005001,bbox_drift,confirmed,"Vùng xanh phủ đúng một người; box đỏ person bị lệch khỏi người, cắt mất một phần thân, không phải hai người bị gộp"
+000000017436,category_swap,confirmed,"Băng ghế dài bằng bê tông trong công viên, lưng tựa khắc chữ, đủ chỗ cho nhiều người, một ông cụ ngồi ở đầu bên phải; detection ghi bench là đúng, panoptic ghi chair là sai"
+000000022589,class_swap,confirmed,"Ảnh cho thấy một con cừu với bộ lông dày xoăn và khuôn mặt đặc trưng của cừu; panoptic ghi sheep đúng, còn detection ghi horse sai."
+000000007784,bbox_drift,confirmed,"Xác nhận bbox_drift: khung detection không bao phủ toàn bộ chiếc diều, lệch so với biên panoptic; cần chỉnh lại bounding box."
+000000018737,bbox_drift,confirmed,"Một chiếc mô tô touring trên bãi cát, segment phủ đúng một xe; box đỏ dịch sang phải: cắt mất cốp sau và đuôi xe bên trái, thừa khoảng nền trống trước bánh trước bên phải"
