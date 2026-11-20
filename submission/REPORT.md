@@ -1,4 +1,4 @@
-# Báo cáo nhóm VoDuyThanh
+# Báo cáo nhóm 57
 
 ## 1. Số liệu luyện tập
 - F1 theo seed (rule / cross_check / overall): <<seed: ... / ... / ...>>

@@ -1,8 +1,8 @@
-# Nhóm VoDuyThanh
+# Nhóm 57
 
 - Nhóm trưởng: Võ Duy Thanh (2A202603211)
 - Seed luyện tập: 6475 (lô v1 `lab250_9b6266dd5aa0`, gắn training run R-021)
-- Repo: https://github.com/11thanh2233/K5-L23-DAY10-VoDuyThanh-Release
+- Repo: https://github.com/11thanh2233/K5-L23-DAY10-NHOM57-Release
 
 > Mỗi người: chọn một dòng Người 2–6, tự điền họ tên, MSHV, tài khoản GitHub, rồi tự commit bằng tài khoản của mình
 > (`git config user.name` / `user.email` là của bạn). Mỗi người cần ít nhất 2 commit có nội dung.

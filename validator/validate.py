@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Validator của nhóm VoDuyThanh — Day 10.
+"""Validator của nhóm 57 — Day 10.
 
     python validator/validate.py <thư_mục_delivery> --out <errors.json> [--candidates <candidates.json>]
 
@@ -431,7 +431,7 @@ def validate(root: Path) -> tuple[list[dict], list[dict]]:
 
 
 def main() -> int:
-    ap = argparse.ArgumentParser(description="Validator lô Day 10 (nhóm VoDuyThanh)")
+    ap = argparse.ArgumentParser(description="Validator lô Day 10 (nhóm 57)")
     ap.add_argument("delivery", help="thư mục delivery/")
     ap.add_argument("--out", required=True, help="errors.json (lỗi luật)")
     ap.add_argument("--candidates", help="candidates.json (ứng viên lỗi gán nhãn, cần xem ảnh)")
