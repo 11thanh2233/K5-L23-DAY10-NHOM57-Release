@@ -1,3 +1,4 @@
 image,type,verdict,note
-000000007795,instance_merge,,
-000000021903,bbox_drift,,
+000000007795,instance_merge,confirmed,"Hai chiếc giường riêng: giường lớn phía trước và giường đôi phía sau sát cửa sổ, mỗi chiếc có box bed riêng nhưng panoptic tô chung một segment bed phủ cả hai"
+000000021903,bbox_drift,rejected,"Box person ôm vừa khít người đàn ông đang đưa tay cho voi ăn, không lệch; phần tràn 89 px là do segment phủ sang người khác ở mép phải ảnh"
+000000021903,instance_merge,confirmed,Segment person gộp người đàn ông cho voi ăn với người thứ hai bị cắt ở mép phải ảnh; người kia có box riêng nhưng không có segment riêng
