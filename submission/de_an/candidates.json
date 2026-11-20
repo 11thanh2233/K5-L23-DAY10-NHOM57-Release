@@ -72,7 +72,7 @@
   {
    "image": "img_0002",
    "type": "instance_merge",
-   "reason": "segment 3188092 'couch' (59322 px) trải trên 2 box 'couch': box #2 chứa 50%, box #1 chứa 49%. Box thừa không có segment riêng. Mở ảnh: có phải hai vật riêng bị gộp thành một segment?",
+   "reason": "segment 3188092 'couch' (59322 px) trải trên 3 box 'couch': box #2 chứa 50% segment, được lấp đầy 65%, box #1 chứa 49% segment, được lấp đầy 63%, box #13 chứa 17% segment, được lấp đầy 33%. Box thừa không có segment riêng. Mở ảnh: có phải hai vật riêng bị gộp thành một segment?",
    "seg_id": 3188092,
    "seg_bbox_px": [
     0,
@@ -92,63 +92,15 @@
      204,
      637,
      420
+    ],
+    [
+     351,
+     222,
+     586,
+     351
     ]
    ],
    "pan_class": "couch"
-  },
-  {
-   "image": "img_0013",
-   "type": "instance_merge",
-   "reason": "segment 2887369 'orange' (54335 px) trải trên 2 box 'orange': box #3 chứa 100%, box #4 chứa 27%. Box thừa không có segment riêng. Mở ảnh: có phải hai vật riêng bị gộp thành một segment?",
-   "seg_id": 2887369,
-   "seg_bbox_px": [
-    0,
-    0,
-    306,
-    236
-   ],
-   "box_px": [
-    [
-     0,
-     0,
-     314,
-     236
-    ],
-    [
-     0,
-     115,
-     229,
-     479
-    ]
-   ],
-   "pan_class": "orange"
-  },
-  {
-   "image": "img_0027",
-   "type": "instance_merge",
-   "reason": "segment 223376 'truck' (4657 px) trải trên 2 box 'truck': box #1 chứa 100%, box #17 chứa 50%. Box thừa không có segment riêng. Mở ảnh: có phải hai vật riêng bị gộp thành một segment?",
-   "seg_id": 223376,
-   "seg_bbox_px": [
-    220,
-    228,
-    339,
-    283
-   ],
-   "box_px": [
-    [
-     220,
-     228,
-     339,
-     283
-    ],
-    [
-     0,
-     0,
-     284,
-     400
-    ]
-   ],
-   "pan_class": "truck"
   },
   {
    "image": "img_0158",
@@ -168,33 +120,6 @@
     171
    ],
    "pan_class": "bear"
-  },
-  {
-   "image": "img_0204",
-   "type": "instance_merge",
-   "reason": "segment 6817581 'cup' (311 px) trải trên 2 box 'cup': box #24 chứa 100%, box #23 chứa 41%. Box thừa không có segment riêng. Mở ảnh: có phải hai vật riêng bị gộp thành một segment?",
-   "seg_id": 6817581,
-   "seg_bbox_px": [
-    151,
-    155,
-    166,
-    182
-   ],
-   "box_px": [
-    [
-     151,
-     155,
-     167,
-     182
-    ],
-    [
-     137,
-     139,
-     160,
-     172
-    ]
-   ],
-   "pan_class": "cup"
   },
   {
    "image": "img_0237",
@@ -218,7 +143,7 @@
   {
    "image": "img_0247",
    "type": "instance_merge",
-   "reason": "segment 12703920 'tv' (8614 px) trải trên 2 box 'tv': box #4 chứa 50%, box #3 chứa 49%. Box thừa không có segment riêng. Mở ảnh: có phải hai vật riêng bị gộp thành một segment?",
+   "reason": "segment 12703920 'tv' (8614 px) trải trên 2 box 'tv': box #4 chứa 50% segment, được lấp đầy 85%, box #3 chứa 49% segment, được lấp đầy 98%. Box thừa không có segment riêng. Mở ảnh: có phải hai vật riêng bị gộp thành một segment?",
    "seg_id": 12703920,
    "seg_bbox_px": [
     57,

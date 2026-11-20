@@ -8,8 +8,12 @@ Tín hiệu (đo trên lô sạch runs/clean và các seed 6475, 777, 4242; xem 
   segment bbox vượt ra ngoài box bao nhiêu px ở cạnh tệ nhất. Tự nhiên <= 2 px (làm tròn) trên
   clean, 6475, 777, 4242; các ca lệch tràn >= 12 px. (Tỉ lệ pixel ngoài box thì yếu với vật nhỏ:
   một box lệch 12 px trên vật 52x64 px chỉ để ~20% pixel ra ngoài.)
-- instance_merge: một segment có pixel nằm đáng kể trong một box cùng lớp KHÁC mà box đó
-  không ghép được với segment nào của riêng nó (vật của box đó đã bị gộp vào segment này).
+- instance_merge: một box cùng lớp KHÁC không ghép được với segment nào của riêng nó, mà lại được
+  segment này LẤP ĐẦY (pixel segment trong box / diện tích box). Vật của box đó đã bị gộp vào segment.
+  Đo trên các ca đã xem ảnh: merge thật lấp đầy box thừa 0,32–0,98; box chỉ chồng lên vì hai vật
+  đứng sát (không phải merge) chỉ 0,02–0,18. Tỉ lệ "box thừa chứa bao nhiêu % segment" thì yếu:
+  vật bị gộp nhỏ (người cắt ở mép ảnh) chỉ chiếm 7% segment chung.
+- Xét merge TRƯỚC drift: segment bị gộp phình ra ngoài box của vật giữ lại, trông giống box lệch.
 - bbox_drift: box cùng lớp lệch khỏi segment: dải ngoài box dày, và không giải thích được bằng merge.
 """
 
@@ -18,8 +22,9 @@ from __future__ import annotations
 # ---------------------------------------------------------------- ngưỡng
 
 DRIFT_MIN_PX = 5         # segment tràn ra ngoài box >= 5 px (tự nhiên <= 2, lỗi >= 12)
-DRIFT_MIN_REL = 0.05     # và >= 5% cạnh ngắn của segment (bỏ lệch 1 px trên vật tí hon)
-MERGE_MIN_FRAC = 0.20    # box cùng lớp thứ hai chứa >= 20% pixel của segment
+DRIFT_MIN_REL = 0.01     # và >= 1% cạnh ngắn (vật lớn: box lệch + phóng to vẫn chỉ tràn ~8 px trên con vật ~400 px)
+MERGE_MIN_FILL = 0.25    # box thừa được segment lấp đầy >= 25% diện tích (merge thật >= 0,32; chồng tự nhiên <= 0,18)
+MERGE_MIN_FRAC = 0.03    # và box thừa chứa >= 3% pixel của segment (bỏ chạm mép lặt vặt)
 MIN_SEG_PX = 100         # bỏ segment quá nhỏ: không xem được bằng mắt, dễ nhiễu
 
 
@@ -40,32 +45,34 @@ def drift_merge_candidates(cache: dict) -> list[dict]:
         for sid, s in sorted(img["segs"].items(), key=lambda kv: -kv[1]["pixels"]):
             if flagged or s["pixels"] < MIN_SEG_PX:
                 continue
-            same = []  # (frac, box_idx) các box cùng lớp có chứa pixel của segment
+            same = []  # (frac, box_idx, fill) các box cùng lớp có chứa pixel của segment
             for bi, (name, b) in boxes.items():
                 if name != s["name"]:
                     continue
                 k = m["inside"].get((bi, sid), 0)
                 if k:
-                    same.append((k / s["pixels"], bi))
+                    area = max(1, (b[2] - b[0]) * (b[3] - b[1]))
+                    same.append((k / s["pixels"], bi, k / area))
             same.sort(reverse=True)
             p = pair_of_seg.get(sid)
 
-            # ---- instance_merge: segment trải sang box cùng lớp không có segment riêng
-            orphans = [(f, bi) for f, bi in same
-                       if f >= MERGE_MIN_FRAC and bi in unmatched_boxes and (p is None or bi != p["box_idx"])]
-            owner = [(f, bi) for f, bi in same if p is not None and bi == p["box_idx"]] or \
-                    [(f, bi) for f, bi in same if f >= MERGE_MIN_FRAC and (f, bi) not in orphans][:1]
+            # ---- instance_merge: box cùng lớp không có segment riêng mà bị segment này lấp đầy
+            orphans = [(f, bi, fl) for f, bi, fl in same
+                       if bi in unmatched_boxes and (p is None or bi != p["box_idx"])
+                       and fl >= MERGE_MIN_FILL and f >= MERGE_MIN_FRAC]
+            owner = [(f, bi, fl) for f, bi, fl in same if p is not None and bi == p["box_idx"]] or \
+                    [x for x in same if x not in orphans][:1]
             if orphans and (owner or len(orphans) >= 2):
                 parts = (owner + orphans)[:3]
                 out.append({
                     "image": stem,
                     "type": "instance_merge",
                     "reason": f"segment {sid} '{s['name']}' ({s['pixels']} px) trải trên {len(parts)} box '{s['name']}': "
-                              + ", ".join(f"box #{bi} chứa {int(f * 100)}%" for f, bi in parts)
+                              + ", ".join(f"box #{bi} chứa {int(f * 100)}% segment, được lấp đầy {int(fl * 100)}%" for f, bi, fl in parts)
                               + ". Box thừa không có segment riêng. Mở ảnh: có phải hai vật riêng bị gộp thành một segment?",
                     "seg_id": sid,
                     "seg_bbox_px": list(s["bbox"]),
-                    "box_px": [list(boxes[bi][1]) for _, bi in parts],
+                    "box_px": [list(boxes[bi][1]) for _, bi, _ in parts],
                     "pan_class": s["name"],
                 })
                 flagged = True
