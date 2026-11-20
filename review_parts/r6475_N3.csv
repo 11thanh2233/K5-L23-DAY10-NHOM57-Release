@@ -1,2 +1,2 @@
 image,type,verdict,note
-000000017436,,,
+000000017436,category_swap,confirmed,"Băng ghế dài bằng bê tông trong công viên, lưng tựa khắc chữ, đủ chỗ cho nhiều người, một ông cụ ngồi ở đầu bên phải; detection ghi bench là đúng, panoptic ghi chair là sai"
