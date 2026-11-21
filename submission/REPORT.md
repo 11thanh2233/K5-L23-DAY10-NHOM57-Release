@@ -1,6 +1,6 @@
 # Báo cáo nhóm 57
 
-Seed luyện tập **6475**, lô v1 `lab250_9b6266dd5aa0`. Mọi số dưới đây lấy từ file thật trong `runs/` (tự đo bằng `score_findings.py`, chỉ in F1 làm tròn một chữ số); không dùng `_private`, `--dev-truth` hay `--truth-dir`.
+Seed luyện tập **6475**.
 
 ## 1. Số liệu luyện tập
 
